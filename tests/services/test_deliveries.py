@@ -187,6 +187,7 @@ async def test_detail_classifies_new_and_known_values(db: Database) -> None:
 
     assert detail is not None
     assert detail.degraded is False
+    assert detail.limited_reason is None
     assert detail.summary.total_values == 2
     assert detail.summary.new_values == 1
     assert detail.summary.known_values == 1
@@ -254,6 +255,7 @@ async def test_detail_falls_back_when_raw_payload_is_purged(db: Database) -> Non
 
     assert detail is not None
     assert detail.degraded is True
+    assert detail.limited_reason == "purged"
     assert detail.summary.known_values is None
     assert [row.field_name for row in detail.values] == ["mileage"]
     assert detail.values[0].status == "new"
@@ -280,6 +282,7 @@ async def test_detail_falls_back_when_parser_raises(db: Database) -> None:
 
     assert detail is not None
     assert detail.degraded is True
+    assert detail.limited_reason == "parse_failed"
     assert [row.field_name for row in detail.values] == ["mileage"]
 
 
@@ -295,6 +298,7 @@ async def test_detail_falls_back_when_no_parser_is_registered(db: Database) -> N
 
     assert detail is not None
     assert detail.degraded is True
+    assert detail.limited_reason == "no_parser"
     assert detail.values == ()
 
 
@@ -323,3 +327,26 @@ async def test_detail_paginates_values(db: Database) -> None:
     assert len(first_page.values) == 2
     assert len(second_page.values) == 1
     assert first_page.total_pages == 2
+
+
+async def test_detail_of_a_placeholder_is_not_parsed(db: Database) -> None:
+    vehicle_id = await _seed_vehicle(db)
+    payload = b"placeholder"
+    delivery_id = await _seed_delivery(
+        db,
+        vehicle_id,
+        remote_name="20261025_no_content_found.zip",
+        delivered_at=_NOW,
+        has_content=False,
+        parse_state="empty",
+        raw_payload=payload,
+    )
+    provider = FakeProvider()
+    provider.set_parser(FakeParser(fail_on={payload}))
+    browser = DeliveryBrowser(db, _registry(provider), clock=lambda: _NOW)
+
+    detail = await browser.detail(delivery_id, only_new=False, query="", page=1)
+
+    assert detail is not None
+    assert detail.limited_reason == "placeholder"
+    assert detail.values == ()

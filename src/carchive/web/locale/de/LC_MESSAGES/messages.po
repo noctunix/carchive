@@ -733,8 +733,23 @@ msgstr "abgerufen"
 msgid "Back to the deliveries list"
 msgstr "Zurück zur Liste der Lieferungen"
 
-msgid "The original payload is no longer available, so only the values this delivery first reported can be shown; the search and \"only new\" filters have no effect here."
-msgstr "Die ursprünglichen Rohdaten sind nicht mehr verfügbar, daher können nur die Werte gezeigt werden, die diese Lieferung erstmals gemeldet hat; Suche und Filter \"nur neue\" wirken hier nicht."
+msgid "Placeholder: the portal delivered this file without any vehicle data."
+msgstr "Platzhalter: Das Portal hat diese Datei ohne Fahrzeugdaten geliefert."
+
+msgid "The original payload is no longer stored."
+msgstr "Die ursprünglichen Rohdaten sind nicht mehr gespeichert."
+
+msgid "The stored payload could not be read again."
+msgstr "Die gespeicherten Rohdaten konnten nicht erneut gelesen werden."
+
+msgid "This provider's payloads cannot be read again."
+msgstr "Die Rohdaten dieses Anbieters können nicht erneut gelesen werden."
+
+msgid "Only the values this delivery reported first are shown; values it repeated from earlier deliveries are missing, and the filters have no effect."
+msgstr "Gezeigt werden nur die Werte, die diese Lieferung als erste gemeldet hat; aus früheren Lieferungen wiederholte Werte fehlen, und die Filter wirken nicht."
+
+msgid "%(duration)s before delivery"
+msgstr "%(duration)s vor der Lieferung"
 
 msgid "Summary"
 msgstr "Zusammenfassung"

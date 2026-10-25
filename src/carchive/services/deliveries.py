@@ -130,10 +130,12 @@ class DeliveryDetail:
 
     Attributes:
         degraded: `True` if the value list could only be built from what `data_points`
-            already credits to this delivery (raw payload purged or never stored, the
-            provider has no parser, or re-parsing failed), rather than from a fresh
-            re-parse; the search and "only new" filters then have no effect, since only
-            this delivery's own new values are visible either way.
+            already credits to this delivery, rather than from a fresh re-parse; the
+            search and "only new" filters then have no effect, since only this delivery's
+            own new values are visible either way.
+        limited_reason: why the detail is degraded: `"placeholder"` (the portal delivered
+            no content), `"purged"` (raw payload no longer stored), `"no_parser"` or
+            `"parse_failed"`; `None` if not degraded.
     """
 
     id: UUID
@@ -152,6 +154,7 @@ class DeliveryDetail:
     page: int
     total_pages: int
     degraded: bool
+    limited_reason: str | None = None
 
 
 def _value_sort_key(row: DeliveryValueRow) -> tuple[bool, float, str]:
@@ -252,28 +255,38 @@ class DeliveryBrowser:
         if record is None:
             return None
 
-        if record.raw_available:
+        if not record.has_content:
+            reason = "placeholder"
+        elif not record.raw_available:
+            reason = "purged"
+        else:
             fresh = await self._detail_from_raw(record, only_new=only_new, query=query, page=page)
-            if fresh is not None:
+            if isinstance(fresh, DeliveryDetail):
                 return fresh
-            # The payload vanished between `get_detail` and the re-parse attempt (a
-            # concurrent purge), there is no parser, or the parse itself failed; fall back
-            # to what is already on record rather than failing the whole page.
+            reason = fresh
 
-        return await self._detail_from_stored_points(record, page=page)
+        return await self._detail_from_stored_points(record, page=page, reason=reason)
 
     async def _detail_from_raw(
         self, record: DeliveryDetailRecord, *, only_new: bool, query: str, page: int
-    ) -> DeliveryDetail | None:
+    ) -> DeliveryDetail | str:
+        """Re-parse `record`'s raw payload and classify every value in it.
+
+        Returns:
+            The full detail, or the `DeliveryDetail.limited_reason` why it could not be
+            built (the caller then falls back to the values already on record).
+        """
         async with self._db.read() as conn:
             vehicle = await self._vehicles.get(conn, record.vehicle_id)
             account = await self._accounts.get(conn, vehicle.account_id) if vehicle else None
             payload = await self._deliveries.get_raw_payload(conn, record.id)
 
-        if payload is None or vehicle is None or account is None:
-            if payload is not None:
-                logger.warning("deliveries.orphan_delivery", delivery_id=str(record.id))
-            return None
+        if payload is None:
+            # Purged concurrently, between `get_detail` and this read.
+            return "purged"
+        if vehicle is None or account is None:
+            logger.warning("deliveries.orphan_delivery", delivery_id=str(record.id))
+            return "no_parser"
 
         try:
             provider = self._registry.get(account.provider_id)
@@ -282,7 +295,7 @@ class DeliveryBrowser:
             logger.info(
                 "deliveries.no_parser", provider_id=account.provider_id, error=redact(str(exc))
             )
-            return None
+            return "no_parser"
 
         context = ParseContext(
             vin=vehicle.vin,
@@ -298,7 +311,7 @@ class DeliveryBrowser:
             logger.warning(
                 "deliveries.parse_failed", vin=mask_vin(vehicle.vin), error=_short_message(str(exc))
             )
-            return None
+            return "parse_failed"
 
         keys = [
             compute_dedup_key(point.key, point.field_name, point.captured_at, point.value_raw)
@@ -400,7 +413,7 @@ class DeliveryBrowser:
         )
 
     async def _detail_from_stored_points(
-        self, record: DeliveryDetailRecord, *, page: int
+        self, record: DeliveryDetailRecord, *, page: int, reason: str
     ) -> DeliveryDetail:
         offset = (page - 1) * _VALUE_PAGE_SIZE
         async with self._db.read() as conn:
@@ -457,4 +470,5 @@ class DeliveryBrowser:
             page=page,
             total_pages=total_pages,
             degraded=True,
+            limited_reason=reason,
         )

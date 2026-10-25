@@ -9,9 +9,14 @@
 </p>
 <p><a href="/deliveries?vehicle_id={{ detail.vehicle_id }}">{{ _("Back to the deliveries list") }}</a></p>
 
-{% if detail.degraded %}
+{% if detail.limited_reason == "placeholder" %}
+<p class="notice notice-info">{{ _("Placeholder: the portal delivered this file without any vehicle data.") }}</p>
+{% elif detail.degraded %}
 <p class="notice notice-warning">
-  {{ _("The original payload is no longer available, so only the values this delivery first reported can be shown; the search and \"only new\" filters have no effect here.") }}
+  {% if detail.limited_reason == "purged" %}{{ _("The original payload is no longer stored.") }}
+  {% elif detail.limited_reason == "parse_failed" %}{{ _("The stored payload could not be read again.") }}
+  {% else %}{{ _("This provider's payloads cannot be read again.") }}{% endif %}
+  {{ _("Only the values this delivery reported first are shown; values it repeated from earlier deliveries are missing, and the filters have no effect.") }}
 </p>
 {% endif %}
 
@@ -21,7 +26,8 @@
 </p>
 <p>
   {% if detail.summary.captured_max %}
-  {{ _("Newest measurement:") }} {{ detail.summary.captured_max | datetime }} ({{ detail.summary.captured_max_age_s | age }})
+  {{ _("Newest measurement:") }} {{ detail.summary.captured_max | datetime }}
+  ({{ _("%(duration)s before delivery", duration=detail.summary.captured_max_age_s | duration) }})
   {% else %}
   {{ _("No measurement time could be determined.") }}
   {% endif %}
