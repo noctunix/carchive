@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("3. Pick vehicles") }}</h1>
+<p>{{ _("Login successful. Add which vehicles?") }}</p>
+{% if vehicles %}
+<form method="post" action="/setup/vehicles">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="token" value="{{ token }}">
+  {% for vin, masked_vin, name in vehicles %}
+  <p>
+    <label>
+      <input type="checkbox" name="vin" value="{{ vin }}" checked>
+      {{ masked_vin }}{% if name %} ({{ name }}){% endif %}
+    </label>
+  </p>
+  {% endfor %}
+  <button type="submit">{{ _("Add selected vehicles") }}</button>
+</form>
+{% else %}
+<p>{{ _("No vehicles reported for this account yet; it may need a moment after you create the data request in the portal.") }}</p>
+<form method="post" action="/setup/vehicles">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="token" value="{{ token }}">
+  <button type="submit">{{ _("Finish without vehicles") }}</button>
+</form>
+{% endif %}
+{% endblock %}

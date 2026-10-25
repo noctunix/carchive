@@ -1,0 +1,89 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  UV_VERSION: "0.11.15"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Install uv
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -LsSf \
+            "https://astral.sh/uv/${UV_VERSION}/install.sh" |
+            env UV_NO_MODIFY_PATH=1 sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run checks
+        env:
+          UV_FROZEN: "1"
+        run: |
+          set -euo pipefail
+          uv sync
+          scripts/check.sh
+
+  image:
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: ${{ vars.REGISTRY }}
+      REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+      REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Build and push image
+        run: |
+          set -euo pipefail
+          image="${REGISTRY:-localhost/carchive}"
+          tags=("sha-${GITHUB_SHA::12}")
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            tags+=("latest")
+          fi
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            version="${GITHUB_REF_NAME#v}"
+            if ! printf '%s' "${version}" | grep -Eq '^[0-9A-Za-z][0-9A-Za-z._-]{0,127}$'; then
+              echo "tag name is not usable as an image tag" >&2
+              exit 1
+            fi
+            tags+=("${version}")
+          fi
+
+          podman build --format docker --pull=newer \
+            -f deploy/Containerfile -t "${image}:${tags[0]}" .
+          for tag in "${tags[@]:1}"; do
+            podman tag "${image}:${tags[0]}" "${image}:${tag}"
+          done
+
+          if [ -z "${REGISTRY}" ] || [ -z "${REGISTRY_USER}" ] || [ -z "${REGISTRY_TOKEN}" ]; then
+            echo "registry settings incomplete; image built but not pushed"
+            exit 0
+          fi
+          registry_host="${REGISTRY%%/*}"
+          printf '%s' "${REGISTRY_TOKEN}" |
+            podman login --username "${REGISTRY_USER}" --password-stdin "${registry_host}"
+          trap 'podman logout "${registry_host}"' EXIT
+          for tag in "${tags[@]}"; do
+            podman push "${image}:${tag}"
+          done

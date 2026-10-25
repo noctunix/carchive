@@ -1,0 +1,20 @@
+# Reference copy of the systemd user unit that `carchive service install` writes
+# (there with the absolute path of the running carchive in place of %h/.local/bin).
+# Prefer that command; it also enables lingering, which keeps a user unit (and the
+# collector with it) running after logout.
+
+[Unit]
+Description=Carchive EU Data Act collector
+
+[Service]
+ExecStart=%h/.local/bin/carchive serve
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=default.target

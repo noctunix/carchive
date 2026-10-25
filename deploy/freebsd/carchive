@@ -1,0 +1,56 @@
+#!/bin/sh
+#
+# PROVIDE: carchive
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# Add to /etc/rc.conf (or /etc/rc.conf.d/carchive):
+#   carchive_enable="YES"
+#
+# Install:
+#   install -m 0555 deploy/freebsd/carchive /usr/local/etc/rc.d/carchive
+
+. /etc/rc.subr
+
+name="carchive"
+rcvar="carchive_enable"
+
+: "${carchive_enable:=NO}"
+: "${carchive_user:=carchive}"
+: "${carchive_group:=${carchive_user}}"
+: "${carchive_data_dir:=/var/db/carchive}"
+: "${carchive_log_dir:=/var/log/carchive}"
+: "${carchive_log_file:=${carchive_log_dir}/carchive.log}"
+: "${carchive_pidfile:=/var/run/carchive/carchive.pid}"
+: "${carchive_bin:=/usr/local/bin/carchive}"
+
+# carchive_config and carchive_env hold any further CARCHIVE_* variables
+# (CARCHIVE_SECRETS_FILE, CARCHIVE_BIND_HOST, ...), e.g. in /etc/rc.conf.d/carchive:
+#   carchive_env="CARCHIVE_SECRETS_FILE=/usr/local/etc/carchive/secrets.toml"
+: "${carchive_config:=}"
+: "${carchive_env:=}"
+
+pidfile="${carchive_pidfile}"
+procname="${carchive_bin}"
+command="/usr/sbin/daemon"
+command_args="-P ${carchive_pidfile} -r -o ${carchive_log_file} -u ${carchive_user} ${carchive_bin} serve"
+
+start_precmd="carchive_precmd"
+
+carchive_precmd()
+{
+	install -d -o "${carchive_user}" -g "${carchive_group}" -m 0700 "${carchive_data_dir}"
+	install -d -o "${carchive_user}" -g "${carchive_group}" -m 0755 "${carchive_log_dir}"
+	install -d -o "${carchive_user}" -g "${carchive_group}" -m 0755 "$(dirname "${carchive_pidfile}")"
+
+	export CARCHIVE_DATA_DIR="${carchive_data_dir}"
+	if [ -n "${carchive_config}" ]; then
+		export CARCHIVE_CONFIG="${carchive_config}"
+	fi
+	if [ -n "${carchive_env}" ]; then
+		eval export "${carchive_env}"
+	fi
+}
+
+load_rc_config "${name}"
+run_rc_command "$1"

@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:1
+#
+# Multi-stage build: `uv sync` runs against the full build image, but only the
+# resulting virtualenv and the application source end up in the runtime image.
+#
+# Base: python:3.12-slim-trixie (Debian 13, Python 3.12).
+# uv: ghcr.io/astral-sh/uv:0.11.15, copied in rather than pip-installed.
+
+FROM python:3.12-slim-trixie AS build
+
+COPY --from=ghcr.io/astral-sh/uv:0.11.15 /uv /uvx /usr/local/bin/
+
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+COPY src ./src
+COPY README.md ./
+
+# --frozen refuses to update uv.lock; --no-dev skips pytest/mypy/ruff and their
+# transitive dependencies, which the runtime image never needs.
+RUN uv sync --frozen --no-dev
+
+FROM python:3.12-slim-trixie AS runtime
+
+# Fixed, non-root UID: podman/systemd can map it without relying on a
+# dynamically allocated one, and it never collides with a host account.
+RUN groupadd --gid 10001 carchive && \
+    useradd --uid 10001 --gid carchive --no-create-home --shell /usr/sbin/nologin carchive
+
+WORKDIR /app
+COPY --from=build --chown=carchive:carchive /app/.venv /app/.venv
+COPY --from=build --chown=carchive:carchive /app/src /app/src
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    CARCHIVE_DATA_DIR=/data \
+    CARCHIVE_CONTAINER=1 \
+    CARCHIVE_BIND_HOST=0.0.0.0
+
+VOLUME /data
+EXPOSE 8470
+
+USER carchive
+
+# `carchive` itself sets a restrictive umask on startup; no UMASK environment
+# variable is honoured outside that.
+HEALTHCHECK --interval=30s --timeout=8s --start-period=30s --retries=3 \
+    CMD ["carchive", "healthcheck"]
+
+ENTRYPOINT ["carchive"]
+CMD ["serve"]

@@ -1,0 +1,46 @@
+# Podman Quadlet unit: build the image first, then create the secret and the data
+# volume, drop this file into ~/.config/containers/systemd/, and enable lingering so
+# the user's systemd instance (and this unit with it) keeps running after logout. The
+# image is built with `scripts/build-image.sh` and renewed weekly once
+# `scripts/build-image.sh --install-timer` has been run.
+#
+#   podman build --format docker -f deploy/Containerfile -t localhost/carchive:latest .
+#   printf '%s' "$(cat ~/.config/carchive/secrets.toml)" | \
+#       podman secret create carchive-secrets -
+#   podman secret create carchive-vault-key ~/.config/carchive/vault.key
+#   podman volume create carchive-data
+#   loginctl enable-linger "$USER"
+#   systemctl --user daemon-reload
+#   systemctl --user start carchive.service
+#
+# Re-running `podman secret create` after editing secrets.toml requires removing the
+# old secret first (`podman secret rm carchive-secrets`); secrets are immutable. The vault
+# key must be mounted next to the secrets file under the name `vault.key`, otherwise the
+# encrypted portal passwords cannot be read.
+#
+# The container serves HTTPS with a self-signed certificate by default (kept in the data
+# volume), so browse to https://127.0.0.1:8470 and trust the certificate on first use.
+# Own certificates: mount them via two more `Secret=` lines and set CARCHIVE_TLS_CERTFILE
+# and CARCHIVE_TLS_KEYFILE. Behind a TLS-terminating proxy, set CARCHIVE_TLS_SELFSIGNED=false
+# (the server then logs a warning). The image's HEALTHCHECK runs `carchive healthcheck`.
+
+[Unit]
+Description=Carchive EU Data Act collector
+
+[Container]
+Image=localhost/carchive:latest
+PublishPort=127.0.0.1:8470:8470
+Volume=carchive-data:/data:Z
+Secret=carchive-secrets,type=mount,target=/run/secrets/carchive-secrets.toml,uid=10001,mode=0400
+Secret=carchive-vault-key,type=mount,target=/run/secrets/vault.key,uid=10001,mode=0400
+Environment=CARCHIVE_SECRETS_FILE=/run/secrets/carchive-secrets.toml
+NoNewPrivileges=true
+ReadOnly=true
+Tmpfs=/tmp
+
+[Service]
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

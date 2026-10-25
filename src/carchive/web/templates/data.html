@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Data explorer") }}</h1>
+
+{% if not vehicles %}
+<div class="empty-state">
+  <p>{{ _("No vehicles yet.") }}</p>
+  <p><a href="/setup">{{ _("Set up") }}</a></p>
+</div>
+{% else %}
+<form method="get" action="/data">
+  <p>
+    <label for="vehicle_id">{{ _("Vehicle") }}</label>
+    <select id="vehicle_id" name="vehicle_id">
+      {% for vehicle in vehicles %}
+      <option value="{{ vehicle.id }}" {% if vehicle.id == selected_vehicle_id %}selected{% endif %}>{{ vehicle.label }}</option>
+      {% endfor %}
+    </select>
+  </p>
+  <p>
+    <label for="q">{{ _("Search") }}</label>
+    <input id="q" name="q" value="{{ query }}">
+  </p>
+  <p>
+    <label for="cluster">{{ _("Cluster") }}</label>
+    <input id="cluster" name="cluster" value="{{ cluster }}">
+  </p>
+  <button type="submit">{{ _("Apply") }}</button>
+</form>
+
+{% if result and not result.catalog_imported %}
+<p>{{ _("No dictionary catalog has been imported yet, so fields are shown with their raw names only.") }} <a href="/settings">{{ _("Import one in Settings") }}</a></p>
+{% endif %}
+
+{% if result and result.items %}
+<table>
+  <tr>
+    <th>{{ _("Field") }}</th>
+    <th>{{ _("Cluster") }}</th>
+    <th>{{ _("Data points") }}</th>
+    <th>{{ _("Distinct values") }}</th>
+    <th>{{ _("First seen") }}</th>
+    <th>{{ _("Last seen") }}</th>
+    <th>{{ _("Last value") }}</th>
+    <th>{{ _("Mapped") }}</th>
+  </tr>
+  {% for field in result.items %}
+  <tr>
+    <td>
+      <a href="/data/{{ selected_vehicle_id }}/field?name={{ field.field_generic | urlencode }}">
+        {{ field.catalog_name or field.field_generic }}
+      </a>
+      <br><span class="raw-signal">{{ field.field_generic }}</span>
+      {% if field.catalog_description %}<br><span class="muted">{{ field.catalog_description }}</span>{% endif %}
+    </td>
+    <td>{{ field.catalog_clusters | join(", ") }}</td>
+    <td>{{ field.point_count }}</td>
+    <td>{{ field.distinct_value_count }}</td>
+    <td>{% if field.first_captured_at %}{{ field.first_captured_at | datetime }}{% else %}{{ _("unknown") }}{% endif %}</td>
+    <td>{% if field.last_captured_at %}{{ field.last_captured_at | datetime }}{% else %}{{ _("unknown") }}{% endif %}</td>
+    <td class="raw-value">{% if field.last_value_raw is not none %}{{ field.last_value_raw }}{% else %}&mdash;{% endif %}{% if field.catalog_unit %} {{ field.catalog_unit }}{% endif %}</td>
+    <td>{% if field.is_mapped %}{{ _("yes") }}{% else %}{{ _("no") }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% if total_pages > 1 %}
+<p class="muted">
+  {{ _("Page %(page)s of %(total)s", page=page, total=total_pages) }}
+  {% if page > 1 %}<a href="/data?vehicle_id={{ selected_vehicle_id }}&q={{ query | urlencode }}&cluster={{ cluster | urlencode }}&page={{ page - 1 }}">{{ _("Previous") }}</a>{% endif %}
+  {% if page < total_pages %}<a href="/data?vehicle_id={{ selected_vehicle_id }}&q={{ query | urlencode }}&cluster={{ cluster | urlencode }}&page={{ page + 1 }}">{{ _("Next") }}</a>{% endif %}
+</p>
+{% endif %}
+
+{% elif result %}
+<div class="empty-state">
+  <p>{{ _("No fields match this filter.") }}</p>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

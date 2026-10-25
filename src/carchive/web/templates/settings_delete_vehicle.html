@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Delete vehicle '%(label)s'?", label=vehicle.label) }}</h1>
+<p>{{ _("This removes the vehicle and all of its stored data.") }}</p>
+<p>{{ _("Backups are not touched: this data may still appear there until it ages out of retention.") }}</p>
+<form method="post" action="/vehicles/{{ vehicle.id }}/delete">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button type="submit">{{ _("Delete permanently") }}</button>
+</form>
+<p><a href="/accounts">{{ _("Cancel") }}</a></p>
+{% endblock %}

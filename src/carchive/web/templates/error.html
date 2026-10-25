@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ status_code }}</h1>
+{% if status_code == 403 %}
+<p>{{ _("Forbidden.") }}</p>
+{% elif status_code == 404 %}
+<p>{{ _("Page not found.") }}</p>
+{% elif status_code == 500 %}
+<p>{{ _("Something went wrong.") }}</p>
+{% elif status_code == 503 %}
+<p>{{ _("The login system is unavailable. Check the server log.") }}</p>
+{% else %}
+<p>{{ _("An error occurred.") }}</p>
+{% endif %}
+{% endblock %}

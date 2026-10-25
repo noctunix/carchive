@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Deleted") }}</h1>
+{% if has_backups %}
+<p>
+  {{ _(
+    "The oldest remaining backup is %(days)s day(s) old; this data may still appear "
+    "there until it ages out of retention.",
+    days=oldest_backup_age_days
+  ) }}
+</p>
+{% else %}
+<p>{{ _("No backups exist yet.") }}</p>
+{% endif %}
+<p><a href="/accounts">{{ _("Back to accounts") }}</a></p>
+{% endblock %}

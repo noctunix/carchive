@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+{% if notice == "already_set" %}
+<p class="notice-info">{{ _("A password is already set. Please sign in.") }}</p>
+{% endif %}
+{% if error == "invalid_password" %}
+<p class="notice-error">{{ _("Invalid password") }}</p>
+{% elif error == "locked" %}
+<p class="notice-error">{{ _("Too many failed attempts. Try again later.") }}</p>
+{% elif error == "mismatch" %}
+<p class="notice-error">{{ _("The passwords do not match.") }}</p>
+{% elif error == "policy" %}
+<p class="notice-error">{{ _("The password is not acceptable: %(reason)s", reason=detail) }}</p>
+{% endif %}
+
+{% if mode == "login" %}
+<h1>{{ _("Sign in") }}</h1>
+<form method="post" action="/login">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p>
+    <label for="password">{{ _("Password") }}</label>
+    <input id="password" name="password" type="password" required autofocus autocomplete="current-password">
+  </p>
+  <button type="submit">{{ _("Sign in") }}</button>
+</form>
+{% else %}
+<h1>{{ _("Set a password") }}</h1>
+<p>{{ _("No password is set yet. Choose one to protect this Carchive installation.") }}</p>
+<form method="post" action="/login/setup">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p>
+    <label for="new-password">{{ _("New password") }}</label>
+    <input id="new-password" name="new_password" type="password" required minlength="{{ min_length }}" autocomplete="new-password">
+  </p>
+  <p>
+    <label for="new-password-repeat">{{ _("Repeat password") }}</label>
+    <input id="new-password-repeat" name="new_password_repeat" type="password" required minlength="{{ min_length }}" autocomplete="new-password">
+  </p>
+  <p>{{ _("At least %(count)s characters.", count=min_length) }}</p>
+  <button type="submit">{{ _("Set password and sign in") }}</button>
+</form>
+{% endif %}
+{% endblock %}

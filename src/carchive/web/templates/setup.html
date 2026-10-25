@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Set up a vehicle") }}</h1>
+
+<h2>{{ _("1. In the portal") }}</h2>
+<ol>
+  <li>{{ _("Open the portal's start page:") }} <a href="{{ portal_home_url }}" rel="noopener">{{ portal_home_url }}</a></li>
+  <li>{{ _("Log in with your brand account.") }}</li>
+  <li>{{ _("Verify your vehicle and confirm consent to share its data, if asked.") }}</li>
+  <li>{{ _("Create a continuous data request using the \"All Data\" preset and a 15-minute interval.") }}</li>
+  <li>{{ _("Optionally, also request a one-off historical export.") }}</li>
+</ol>
+<p>{{ _("At first every delivery is an empty file. Real data usually shows up after the car has driven or charged, sometimes only after one to three days.") }}</p>
+
+<h2>{{ _("2. Account details") }}</h2>
+{% if error == "unknown_brand" %}
+<p class="error">{{ _("Please choose a brand.") }}</p>
+{% elif error %}
+<p class="error">{{ _("Could not add this account: %(reason)s", reason=error) }}</p>
+{% endif %}
+<form method="post" action="/setup">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p>
+    <label for="provider_choice">{{ _("Brand") }}</label>
+    <select id="provider_choice" name="provider_choice">
+      {% for provider_id, brand in brands %}
+      <option value="{{ provider_id }}|{{ brand }}" {% if provider_id == selected_provider_id and brand == selected_brand %}selected{% endif %}>{{ brand }}</option>
+      {% endfor %}
+    </select>
+  </p>
+  <p>
+    <label for="label">{{ _("Label (letters, digits, - and _ only)") }}</label>
+    <input id="label" name="label" value="{{ label }}" required pattern="[A-Za-z0-9_-]{1,40}" maxlength="40">
+  </p>
+  {% for field in credential_fields %}
+  <p>
+    <label for="field-{{ field.name }}">{{ field.label }}</label>
+    <input id="field-{{ field.name }}" name="{{ field.name }}" type="{{ 'password' if field.secret else 'text' }}" required autocomplete="off">
+  </p>
+  {% endfor %}
+  <button type="submit">{{ _("Test login and add account") }}</button>
+</form>
+{% endblock %}

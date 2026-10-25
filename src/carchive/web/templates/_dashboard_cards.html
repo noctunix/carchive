@@ -1,0 +1,70 @@
+{% import "_notice_text.html" as notice_macros with context %}
+
+<div id="dashboard-cards" hx-get="/partials/dashboard" hx-trigger="every 60s" hx-swap="outerHTML">
+  <section class="status-strip">
+    <p class="status-item">
+      {% if view.last_collector_run_age_s is none %}
+        {{ _("No collector run yet.") }}
+      {% else %}
+        {{ _("Last collector run:") }} {{ view.last_collector_run_age_s|age }} ({{ view.last_collector_run_outcome }})
+      {% endif %}
+    </p>
+    <p class="status-item{% if view.backup_warning %} status-warning{% endif %}">
+      {% if view.last_backup_age_s is none %}
+        {{ _("No backups exist yet.") }}
+      {% else %}
+        {{ _("Last verified backup:") }} {{ view.last_backup_age_s|age }}
+      {% endif %}
+    </p>
+    {% if view.accounts_needing_attention %}
+    <p class="status-item status-warning">
+      {{ _("Accounts needing attention:") }} {{ view.accounts_needing_attention|join(", ") }}
+    </p>
+    {% endif %}
+  </section>
+
+  {% if not view.cards %}
+  <div class="empty-state">
+    <p>{{ _("No vehicles yet.") }}</p>
+    <p><a href="/setup">{{ _("Set up") }}</a></p>
+  </div>
+  {% else %}
+  <div class="card-grid">
+    {% for card in view.cards %}
+    <article class="vehicle-card">
+      <h2><a href="/vehicles/{{ card.id }}">{{ card.label }}</a></h2>
+      <p class="muted">{{ card.brand|brand_label }}</p>
+      <dl class="signal-list">
+        {% for cell in card.cells %}
+        <div class="signal-cell">
+          <dt>{{ cell.signal|signal_label }}</dt>
+          <dd>
+            {% if cell.value is none %}
+            <span class="value-empty">{{ _("no value") }}</span>
+            {% else %}
+            <span class="value{% if cell.kind == "enum" %} raw-value{% endif %}">{{ cell.value|format_number(cell.signal) }}{% if cell.unit %} {{ cell.unit }}{% endif %}</span>
+            <span class="freshness-badge freshness-{{ cell.freshness }}">
+              {{ _("measured") }} {{ cell.age_s|age }} &middot; {{ cell.freshness|freshness_label }}
+            </span>
+            {% if cell.captured_at_quality in ("tz_unknown", "invalid") %}
+            <span class="quality-badge quality-{{ cell.captured_at_quality }}">
+              {% if cell.captured_at_quality == "tz_unknown" %}{{ _("time zone unknown") }}{% else %}{{ _("invalid timestamp") }}{% endif %}
+            </span>
+            {% endif %}
+            {% endif %}
+          </dd>
+        </div>
+        {% endfor %}
+      </dl>
+      {% if card.notices %}
+      <ul class="notice-list">
+        {% for notice in card.notices %}
+        <li class="notice notice-{{ notice.severity }}">{{ notice_macros.notice_text(notice) }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

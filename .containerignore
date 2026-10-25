@@ -1,0 +1,12 @@
+# Allowlist, not a blocklist: excluding everything by default means the build
+# context can never accidentally pick up secrets, local databases or other
+# working files just because nobody thought to list them individually.
+*
+
+!pyproject.toml
+!uv.lock
+!src/
+!README.md
+
+**/__pycache__
+**/*.pyc

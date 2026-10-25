@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="{{ language }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+  <title>Carchive</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='img/icon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
+  <script src="{{ url_for('static', path='vendor/htmx/htmx.min.js') }}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <img class="brand-icon" src="{{ url_for('static', path='img/icon.svg') }}" alt="" width="28" height="28">
+      Carchive
+      <span class="brand-version">v{{ app_version }}</span>
+    </a>
+    {% if authenticated %}
+    <nav>
+      <a href="/">{{ _("Dashboard") }}</a>
+      <a href="/accounts">{{ _("Accounts") }}</a>
+      <a href="/data">{{ _("Data") }}</a>
+      <a href="/backups">{{ _("Backups") }}</a>
+      {% if vehicle_count == 0 %}
+      <a href="/setup">{{ _("Set up") }}</a>
+      {% endif %}
+      <a href="/settings">{{ _("Settings") }}</a>
+    </nav>
+    <form class="logout" method="post" action="/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">{{ _("Sign out") }}</button>
+    </form>
+    {% endif %}
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

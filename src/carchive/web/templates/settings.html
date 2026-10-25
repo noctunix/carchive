@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Settings") }}</h1>
+<p class="section-intro">
+  {{ _("Account and vehicle management live on their own page:") }}
+  <a href="/accounts">{{ _("Accounts") }}</a>.
+</p>
+
+<h2>{{ _("Language") }}</h2>
+<nav class="lang-switch">
+  <a href="/lang/en">EN</a>
+  <a href="/lang/de">DE</a>
+</nav>
+
+<h2>{{ _("Dictionary catalog") }}</h2>
+<p class="section-intro">{{ _("Carchive ships with the manufacturer's dictionary already built in; import one here only to add a different provider or a newer version than the bundled one.") }}</p>
+{% if catalog_versions %}
+<table>
+  <tr>
+    <th>{{ _("Provider") }}</th>
+    <th>{{ _("Version") }}</th>
+    <th>{{ _("Kind") }}</th>
+    <th>{{ _("Entries") }}</th>
+  </tr>
+  {% for version in catalog_versions %}
+  <tr>
+    <td>{{ version.provider_id }}</td>
+    <td>{{ version.catalog_version }}</td>
+    <td>{{ version.kind }}</td>
+    <td>{{ version.entry_count }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="empty-state">
+  <p>{{ _("No catalog imported yet.") }}</p>
+</div>
+{% endif %}
+{% if catalog_providers %}
+<!-- The CSRF token travels in the query string, not a hidden field: this upload is
+     streamed straight to disk by the server without ever buffering/parsing the body
+     (see web.security.SecurityMiddleware's `streaming_paths`), so a form field in that
+     body could never be read for CSRF validation in the first place. -->
+<form method="post" action="/settings/catalog/import?csrf_token={{ csrf_token }}" enctype="multipart/form-data">
+  <p>
+    <label for="catalog-provider">{{ _("Provider") }}</label>
+    <select id="catalog-provider" name="provider_id">
+      {% for provider_id in catalog_providers %}
+      <option value="{{ provider_id }}">{{ provider_id }}</option>
+      {% endfor %}
+    </select>
+  </p>
+  <p>
+    <label for="catalog-version">{{ _("Catalog version (optional, derived from the filename if left empty)") }}</label>
+    <input id="catalog-version" name="catalog_version">
+  </p>
+  <p>
+    <label for="catalog-file">{{ _("Dictionary PDF") }}</label>
+    <input id="catalog-file" name="file" type="file" accept="application/pdf" required>
+  </p>
+  <button type="submit">{{ _("Import") }}</button>
+</form>
+{% endif %}
+
+<h2>{{ _("Security") }}</h2>
+<h3>{{ _("Change password") }}</h3>
+{% if password_message == "changed" %}
+<p class="notice-info">{{ _("Password changed. All other sessions were ended.") }}</p>
+{% elif password_message == "mismatch" %}
+<p class="notice-error">{{ _("The new passwords do not match.") }}</p>
+{% elif password_message == "wrong_current" %}
+<p class="notice-error">{{ _("The current password is wrong.") }}</p>
+{% elif password_message == "locked" %}
+<p class="notice-error">{{ _("Too many failed attempts. Try again later.") }}</p>
+{% elif password_message == "policy" %}
+<p class="notice-error">{{ _("The new password is not acceptable: %(reason)s", reason=password_detail) }}</p>
+{% endif %}
+<form method="post" action="/settings/password">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p>
+    <label for="current-password">{{ _("Current password") }}</label>
+    <input id="current-password" name="current_password" type="password" required autocomplete="current-password">
+  </p>
+  <p>
+    <label for="new-password">{{ _("New password") }}</label>
+    <input id="new-password" name="new_password" type="password" required minlength="{{ min_password_length }}" autocomplete="new-password">
+  </p>
+  <p>
+    <label for="repeat-password">{{ _("Repeat new password") }}</label>
+    <input id="repeat-password" name="repeat" type="password" required minlength="{{ min_password_length }}" autocomplete="new-password">
+  </p>
+  <p>{{ _("At least %(count)s characters.", count=min_password_length) }}</p>
+  <button type="submit">{{ _("Change password") }}</button>
+</form>
+{% endblock %}

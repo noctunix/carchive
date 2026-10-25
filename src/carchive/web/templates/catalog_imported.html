@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Catalog import") }}</h1>
+
+{% if error == "too_large" %}
+<p class="error">{{ _("The uploaded file exceeds the 50 MB limit.") }}</p>
+{% elif error == "invalid_upload" %}
+<p class="error">{{ _("The upload could not be read as a file.") }}</p>
+{% elif error == "catalog_error" %}
+<p class="error">{{ _("Could not import this file: %(reason)s", reason=message) }}</p>
+{% elif result %}
+<p>{{ _("Imported a %(kind)s dictionary as version %(version)s.", kind=result.kind, version=catalog_version) }}</p>
+<ul>
+  <li>{{ _("%(count)s new entries", count=result.new) }}</li>
+  <li>{{ _("%(count)s updated entries", count=result.updated) }}</li>
+  {% if result.duplicate_keys_in_file %}
+  <li>{{ _("%(count)s duplicate keys in the file (the last occurrence was kept)", count=result.duplicate_keys_in_file) }}</li>
+  {% endif %}
+</ul>
+{% endif %}
+
+<p><a href="/settings">{{ _("Back to Settings") }}</a></p>
+{% endblock %}

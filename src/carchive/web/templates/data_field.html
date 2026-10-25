@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ field_generic }}</h1>
+<p><a href="/data?vehicle_id={{ vehicle_id }}">{{ _("Back to the data explorer") }}</a></p>
+
+{% if values %}
+<table>
+  <tr>
+    <th>{{ _("Source field") }}</th>
+    <th>{{ _("Value") }}</th>
+    <th>{{ _("Captured at") }}</th>
+    <th>{{ _("First seen") }}</th>
+    <th>{{ _("Seen") }}</th>
+  </tr>
+  {% for value in values %}
+  <tr>
+    <td>{{ value.field_name }}</td>
+    <td class="raw-value">{% if value.value_raw is not none %}{{ value.value_raw }}{% else %}&mdash;{% endif %}</td>
+    <td>
+      {% if value.captured_at %}{{ value.captured_at | datetime }}{% else %}{{ _("unknown") }}{% endif %}
+      {% if value.captured_at_quality in ("tz_unknown", "invalid") %}
+      <span class="quality-badge quality-{{ value.captured_at_quality }}">
+        {% if value.captured_at_quality == "tz_unknown" %}{{ _("time zone unknown") }}{% else %}{{ _("invalid timestamp") }}{% endif %}
+      </span>
+      {% endif %}
+    </td>
+    <td>{{ value.first_seen_at | datetime }}</td>
+    <td>{{ value.seen_count }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>{{ _("No values recorded for this field.") }}</p>
+{% endif %}
+{% endblock %}

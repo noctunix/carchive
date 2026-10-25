@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Setup complete") }}</h1>
+{% if added %}
+<p>{{ ngettext("Added %(count)s vehicle.", "Added %(count)s vehicles.", added, count=added) }}</p>
+{% else %}
+<p>{{ _("Account added; no vehicles were added yet.") }}</p>
+{% endif %}
+<p><a href="/">{{ _("Go to the dashboard") }}</a></p>
+{% endblock %}

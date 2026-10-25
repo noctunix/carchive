@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Backups") }}</h1>
+<p class="section-intro">{{ _("Uploading a historical export file will also live here once built; for now this page only covers backups.") }}</p>
+
+{% if verify_message %}
+{% if verify_message == "verified" %}
+<p class="notice-info">{{ _("%(name)s is intact.", name=verify_name) }}</p>
+{% elif verify_message == "checksum_failed" %}
+<p class="notice-error">{{ _("%(name)s: the checksum is missing or does not match.", name=verify_name) }}</p>
+{% elif verify_message == "content_failed" %}
+<p class="notice-error">{{ _("%(name)s: the content cannot be read. The passphrase is wrong or the archive is damaged.", name=verify_name) }}</p>
+{% elif verify_message == "passphrase_required" %}
+<p class="notice-error">{{ _("Enter the passphrase to check %(name)s.", name=verify_name) }}</p>
+{% elif verify_message == "passphrase_unavailable" %}
+<p class="notice-error">{{ _("The configured passphrase file cannot be used. See the server log.") }}</p>
+{% elif verify_message == "too_long" %}
+<p class="notice-error">{{ _("The passphrase must be at most %(count)s characters long.", count=max_passphrase_length) }}</p>
+{% elif verify_message == "busy" %}
+<p class="notice-error">{{ _("Another backup operation is running. Try again in a moment.") }}</p>
+{% endif %}
+{% endif %}
+
+{% if backups %}
+<table>
+  <tr>
+    <th>{{ _("Created") }}</th>
+    <th>{{ _("Size") }}</th>
+    <th>{{ _("Encrypted") }}</th>
+    <th>{{ _("Credentials") }}</th>
+    <th>{{ _("Checksum") }}</th>
+    <th></th>
+  </tr>
+  {% for backup in backups %}
+  <tr>
+    <td>{{ backup.created_at | datetime }}</td>
+    <td>{{ backup.size_label }}</td>
+    <td>
+      {% if backup.encrypted %}
+      <span class="status-badge status-badge-positive">{{ _("yes") }}</span>
+      {% else %}
+      <span class="status-badge status-badge-negative">{{ _("no") }}</span>
+      {% endif %}
+    </td>
+    <td>
+      {% if backup.credentials is none %}
+      <span class="status-badge status-badge-unknown">{{ _("unknown") }}</span>
+      {% elif backup.credentials %}
+      <span class="status-badge status-badge-positive">{{ _("yes") }}</span>
+      {% else %}
+      <span class="status-badge status-badge-negative">{{ _("no") }}</span>
+      {% endif %}
+    </td>
+    <td>
+      {% if backup.checksum_ok %}
+      <span class="status-badge status-badge-positive">{{ _("ok") }}</span>
+      {% else %}
+      <span class="status-badge status-badge-negative">{{ _("failed") }}</span>
+      {% endif %}
+    </td>
+    <td>
+      <a href="/backups/download/{{ backup.name }}" download>{{ _("Download") }}</a>
+      <form method="post" action="/backups/{{ backup.name }}/verify">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {% if backup.encrypted and not passphrase_file_configured %}
+        <label for="verify-passphrase-{{ loop.index }}">{{ _("Passphrase") }}</label>
+        <input id="verify-passphrase-{{ loop.index }}" name="passphrase" type="password" required maxlength="{{ max_passphrase_length }}" autocomplete="off">
+        {% endif %}
+        <button type="submit">{{ _("Check") }}</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>{{ _("No backups yet.") }}</p>
+{% endif %}
+
+<h2>{{ _("Back up now") }}</h2>
+{% if create_message == "created" %}
+<p class="notice-info">{{ _("Backup created: %(name)s", name=create_name) }}</p>
+{% elif create_message == "verify_failed" %}
+<p class="notice-error">{{ _("Backup %(name)s was created but failed its check. See the server log.", name=create_name) }}</p>
+{% elif create_message == "credentials_unencrypted" %}
+<p class="notice-error">{{ _("Credentials can only be included in an encrypted backup. Enable encryption or leave the credentials out.") }}</p>
+{% elif create_message == "passphrase_required" %}
+<p class="notice-error">{{ _("Enter a passphrase to encrypt the backup.") }}</p>
+{% elif create_message == "mismatch" %}
+<p class="notice-error">{{ _("The passphrases do not match.") }}</p>
+{% elif create_message == "too_short" %}
+<p class="notice-error">{{ _("The passphrase must be at least %(count)s characters long.", count=min_passphrase_length) }}</p>
+{% elif create_message == "too_long" %}
+<p class="notice-error">{{ _("The passphrase must be at most %(count)s characters long.", count=max_passphrase_length) }}</p>
+{% elif create_message == "passphrase_unavailable" %}
+<p class="notice-error">{{ _("The configured passphrase file cannot be used. See the server log.") }}</p>
+{% elif create_message == "failed" %}
+<p class="notice-error">{{ _("The backup could not be created. See the server log.") }}</p>
+{% elif create_message == "busy" %}
+<p class="notice-error">{{ _("Another backup operation is running. Try again in a moment.") }}</p>
+{% endif %}
+<form method="post" action="/backups" class="backup-create-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p>
+    <label><input id="backup-include-credentials" type="checkbox" name="include_credentials" {% if include_credentials %}checked{% endif %}> {{ _("Include credentials (secrets.toml and vault.key)") }}</label>
+  </p>
+  <p>
+    <label><input id="backup-encrypt" type="checkbox" name="encrypt" {% if encrypt %}checked{% endif %}> {{ _("Encrypt") }}</label>
+  </p>
+  <p class="backup-plaintext-credentials">
+    <label><input type="checkbox" name="allow_plaintext_credentials" {% if allow_plaintext_credentials %}checked{% endif %}> {{ _("Also store credentials unencrypted") }}</label>
+  </p>
+  {% if passphrase_file_configured %}
+  <p>{{ _("An encrypted backup uses the configured passphrase file.") }}</p>
+  {% else %}
+  <p>
+    <label for="backup-passphrase">{{ _("Passphrase (only for an encrypted backup, at least %(count)s characters)", count=min_passphrase_length) }}</label>
+    <input id="backup-passphrase" name="passphrase" type="password" maxlength="{{ max_passphrase_length }}" autocomplete="new-password">
+    <label for="backup-repeat">{{ _("Repeat passphrase") }}</label>
+    <input id="backup-repeat" name="repeat" type="password" maxlength="{{ max_passphrase_length }}" autocomplete="new-password">
+  </p>
+  {% endif %}
+  <button type="submit">{{ _("Back up now") }}</button>
+</form>
+<p>{{ _("Restoring replaces the live database and needs the server stopped: run \"carchive backup restore\" on the command line.") }}</p>
+{% endblock %}

@@ -1,0 +1,420 @@
+:root {
+  --bg: #ffffff;
+  --surface: #f7f9fb;
+  --fg: #1a1a1a;
+  --muted: #595959;
+  --border: #d9d9d9;
+  --banner-bg: #b00020;
+  --warning: #9a6700;
+  --accent: #0077cc;
+  --accent-fg: #ffffff;
+  --freshness-fresh-bg: #d7f5dc;
+  --freshness-aging-bg: #ffe9b3;
+  --freshness-stale-bg: #ffd0d0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121212;
+    --surface: #1a1a1a;
+    --fg: #eaeaea;
+    --muted: #a6a6a6;
+    --border: #3a3a3a;
+    --banner-bg: #ff5252;
+    --warning: #ffb703;
+    --accent: #0099ff;
+    --accent-fg: #0a0a0a;
+    --freshness-fresh-bg: #1e3d26;
+    --freshness-aging-bg: #4a3a12;
+    --freshness-stale-bg: #4a1f1f;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family:
+    system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--accent);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button,
+input[type="submit"] {
+  font: inherit;
+  color: var(--accent-fg);
+  background: var(--accent);
+  border: 0;
+  border-radius: 0.4rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+button:hover,
+input[type="submit"]:hover {
+  filter: brightness(1.08);
+}
+
+button:disabled,
+input[type="submit"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.brand-icon {
+  display: block;
+}
+
+.brand-version {
+  font-size: 0.6em;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.topbar nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.topbar nav a {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.topbar nav a:hover {
+  color: var(--accent);
+}
+
+.lang-switch {
+  display: flex;
+  gap: 0.75rem;
+}
+
+main {
+  padding: 1.5rem 1rem;
+  /* Viewport-relative with a generous cap, so this actually fills a wide monitor instead
+     of guessing one "wide enough" rem value that's still short on anything bigger. */
+  max-width: min(96vw, 160rem);
+  margin: 0 auto;
+}
+
+p,
+h1,
+h2 {
+  overflow-wrap: break-word;
+}
+
+h1,
+h2 {
+  letter-spacing: -0.01em;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.status-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.status-item.status-warning {
+  color: var(--warning);
+  font-weight: bold;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 40rem) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr));
+  }
+}
+
+.vehicle-card {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  background: var(--surface);
+}
+
+.vehicle-card h2 {
+  margin-top: 0;
+}
+
+.vehicle-card h2 a {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.vehicle-card h2 a:hover {
+  color: var(--accent);
+}
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  margin: 1rem 0;
+  background: var(--surface);
+}
+
+.panel h2 {
+  margin-top: 0;
+}
+
+.panel table {
+  margin-bottom: 0;
+}
+
+.signal-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+}
+
+.signal-cell {
+  display: contents;
+}
+
+.signal-cell dt {
+  color: var(--muted);
+}
+
+.signal-cell dt,
+.signal-cell dd {
+  /* Grid items default to min-width: auto, which lets a long value+badge in the "1fr"
+     column overflow the track (and the card's border) instead of wrapping. */
+  min-width: 0;
+  /* An enum value as delivered (e.g. "NOT_READY_FOR_CHARGING") is one unbreakable word;
+     without this it overflows the shrunk column instead of wrapping. */
+  overflow-wrap: anywhere;
+}
+
+.value-empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.freshness-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.85em;
+  border-radius: 0.25rem;
+  padding: 0 0.3rem;
+}
+
+.freshness-fresh {
+  background: var(--freshness-fresh-bg);
+}
+
+.freshness-aging {
+  background: var(--freshness-aging-bg);
+}
+
+.freshness-stale {
+  background: var(--freshness-stale-bg);
+  font-weight: bold;
+}
+
+.freshness-unknown {
+  background: var(--border);
+}
+
+.quality-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.85em;
+  border: 1px solid var(--warning);
+  border-radius: 0.25rem;
+  padding: 0 0.3rem;
+}
+
+/* Enum values as delivered by the portal (e.g. "notReadyForCharging"), left untranslated
+   on purpose; styled to look visibly different from a formatted measurement. */
+.raw-value,
+.raw-signal {
+  /* As delivered, this is one unbreakable word (e.g. "NOT_READY_FOR_CHARGING" or a
+     dotted field path with no spaces); without this it overflows its container instead
+     of wrapping. */
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.raw-value {
+  font-size: 0.9em;
+}
+
+.raw-signal {
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+.notice-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.notice-info {
+  color: var(--fg);
+}
+
+.notice-warning {
+  color: var(--warning);
+}
+
+.notice-error {
+  color: var(--banner-bg);
+  font-weight: bold;
+}
+
+.topbar form.logout {
+  margin: 0 0 0 auto;
+}
+
+.topbar form.logout button {
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.topbar form.logout button:hover {
+  filter: none;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.status-badge {
+  display: inline-block;
+  border-radius: 0.25rem;
+  padding: 0 0.4rem;
+  font-size: 0.85em;
+}
+
+.status-badge-positive {
+  background: var(--freshness-fresh-bg);
+}
+
+.status-badge-negative {
+  background: var(--freshness-stale-bg);
+  font-weight: bold;
+}
+
+.status-badge-unknown {
+  background: var(--border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+tbody tr:hover {
+  background: var(--surface);
+}
+
+.danger-link {
+  color: var(--banner-bg);
+}
+
+.danger-link:hover {
+  text-decoration: none;
+}
+
+.section-intro {
+  color: var(--muted);
+  max-width: 40rem;
+}
+
+/* A wide main (for the dashboard's card grid) would otherwise stretch plain notice/prose
+   paragraphs edge to edge, hurting readability; tables, grids and forms are unaffected
+   since they are not bare <p> children of main. */
+main > p {
+  max-width: 40rem;
+}
+
+.empty-state {
+  border: 1px dashed var(--border);
+  border-radius: 0.75rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-state p:first-child {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* Only has an effect while credentials are included and encryption is off; grayed out
+   otherwise so the form does not suggest a choice that currently does nothing. */
+.backup-create-form:not(:has(#backup-include-credentials:checked)) .backup-plaintext-credentials,
+.backup-create-form:has(#backup-encrypt:checked) .backup-plaintext-credentials {
+  opacity: 0.5;
+}

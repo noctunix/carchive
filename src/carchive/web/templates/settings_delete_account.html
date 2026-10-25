@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Delete account '%(label)s'?", label=label) }}</h1>
+<p>
+  {{ ngettext(
+    "This removes the account, %(count)s vehicle and all of its stored data.",
+    "This removes the account, %(count)s vehicles and all of their stored data.",
+    vehicles|length,
+    count=vehicles|length
+  ) }}
+</p>
+<p>{{ _("Backups are not touched: this data may still appear there until it ages out of retention.") }}</p>
+<form method="post" action="/accounts/{{ label }}/delete">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button type="submit">{{ _("Delete permanently") }}</button>
+</form>
+<p><a href="/accounts">{{ _("Cancel") }}</a></p>
+{% endblock %}

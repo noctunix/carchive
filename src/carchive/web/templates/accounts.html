@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Accounts") }}</h1>
+<p class="section-intro">{{ _("Portal accounts and the vehicles they report. Each account's stored password can be replaced if the portal changes it.") }}</p>
+
+{% if accounts %}
+{% for account in accounts %}
+<section class="panel">
+  <h2>{{ account.label }} <span class="muted">({{ account.brand|brand_label }})</span></h2>
+  <p>
+    {{ account.state }}
+    {% if account.state_reason %}&mdash; {{ account.state_reason }}{% endif %}
+    &middot;
+    {% if account.last_run_at %}
+    {{ _("Last run:") }} {{ account.last_run_at | datetime }} ({{ account.last_run_outcome }})
+    {% else %}
+    {{ _("Last run:") }} {{ _("never") }}
+    {% endif %}
+  </p>
+  <p>
+    <a href="/accounts/{{ account.label }}/password">{{ _("Replace password") }}</a>
+    &middot;
+    <a class="danger-link" href="/accounts/{{ account.label }}/delete">{{ _("Delete account") }}</a>
+  </p>
+
+  {% set account_vehicles = vehicles_by_account.get(account.label, []) %}
+  {% if account_vehicles %}
+  <table>
+    <tr>
+      <th>{{ _("Label") }}</th>
+      <th>{{ _("Brand") }}</th>
+      <th>{{ _("Last run") }}</th>
+      <th></th>
+    </tr>
+    {% for vehicle in account_vehicles %}
+    <tr>
+      <td>
+        <a href="/vehicles/{{ vehicle.id }}">{{ vehicle.label }}</a>
+        {% if vehicle.archived %} ({{ _("archived") }}){% endif %}
+      </td>
+      <td>{{ vehicle.brand|brand_label }}</td>
+      <td>
+        {% if vehicle.last_run_at %}
+        {{ vehicle.last_run_at | datetime }} ({{ vehicle.last_run_outcome }})
+        {% else %}
+        {{ _("never") }}
+        {% endif %}
+      </td>
+      <td><a class="danger-link" href="/vehicles/{{ vehicle.id }}/delete">{{ _("Delete") }}</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">{{ _("No vehicles yet.") }}</p>
+  {% endif %}
+</section>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+  <p>{{ _("No accounts yet.") }}</p>
+</div>
+{% endif %}
+<p><a href="/setup">{{ _("Add another account") }}</a></p>
+{% endblock %}

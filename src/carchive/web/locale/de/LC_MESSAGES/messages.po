@@ -1,0 +1,686 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: carchive\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: de\n"
+
+msgid "Dashboard"
+msgstr "Übersicht"
+
+msgid "Vehicles"
+msgstr "Fahrzeuge"
+
+msgid "Data"
+msgstr "Daten"
+
+msgid "Imports"
+msgstr "Importe"
+
+msgid "Settings"
+msgstr "Einstellungen"
+
+msgid "No vehicles yet."
+msgstr "Noch keine Fahrzeuge."
+
+msgid "Last collector run:"
+msgstr "Letzter Abruf:"
+
+msgid "No collector run yet."
+msgstr "Noch kein Abruf erfolgt."
+
+msgid "Coming soon."
+msgstr "Kommt noch."
+
+msgid "Forbidden."
+msgstr "Zugriff verweigert."
+
+msgid "Page not found."
+msgstr "Seite nicht gefunden."
+
+msgid "Something went wrong."
+msgstr "Etwas ist schiefgelaufen."
+
+msgid "An error occurred."
+msgstr "Ein Fehler ist aufgetreten."
+
+msgid "Set up"
+msgstr "Einrichten"
+
+msgid "Set up a vehicle"
+msgstr "Fahrzeug einrichten"
+
+msgid "1. In the portal"
+msgstr "1. Im Portal"
+
+msgid "Open the portal's start page:"
+msgstr "Startseite des Portals öffnen:"
+
+msgid "Log in with your brand account."
+msgstr "Mit dem Konto der Marke anmelden."
+
+msgid "Verify your vehicle and confirm consent to share its data, if asked."
+msgstr "Fahrzeug bestätigen und, falls gefragt, der Datenfreigabe zustimmen."
+
+msgid "Create a continuous data request using the \"All Data\" preset and a 15-minute interval."
+msgstr "Eine fortlaufende Datenanfrage mit dem Preset „All Data“ und 15-Minuten-Intervall anlegen."
+
+msgid "Optionally, also request a one-off historical export."
+msgstr "Optional zusätzlich den einmaligen historischen Export beantragen."
+
+msgid "At first every delivery is an empty file. Real data usually shows up after the car has driven or charged, sometimes only after one to three days."
+msgstr "Anfangs sind alle Lieferungen leere Dateien. Echte Daten erscheinen meist erst nach einer Fahrt oder einem Ladevorgang, mitunter erst nach ein bis drei Tagen."
+
+msgid "2. Account details"
+msgstr "2. Kontodaten"
+
+msgid "Please choose a brand."
+msgstr "Bitte eine Marke wählen."
+
+msgid "Could not add this account: %(reason)s"
+msgstr "Konto konnte nicht angelegt werden: %(reason)s"
+
+msgid "Brand"
+msgstr "Marke"
+
+msgid "Label (letters, digits, - and _ only)"
+msgstr "Label (nur Buchstaben, Ziffern, - und _)"
+
+msgid "Test login and add account"
+msgstr "Login testen und Konto anlegen"
+
+msgid "3. Pick vehicles"
+msgstr "3. Fahrzeuge auswählen"
+
+msgid "Login successful. Add which vehicles?"
+msgstr "Login erfolgreich. Welche Fahrzeuge hinzufügen?"
+
+msgid "Add selected vehicles"
+msgstr "Ausgewählte Fahrzeuge hinzufügen"
+
+msgid "No vehicles reported for this account yet; it may need a moment after you create the data request in the portal."
+msgstr "Für dieses Konto werden noch keine Fahrzeuge gemeldet; das kann nach dem Anlegen der Datenanfrage im Portal etwas dauern."
+
+msgid "Finish without vehicles"
+msgstr "Ohne Fahrzeuge abschließen"
+
+msgid "Setup complete"
+msgstr "Einrichtung abgeschlossen"
+
+msgid "Added %(count)s vehicle."
+msgid_plural "Added %(count)s vehicles."
+msgstr[0] "%(count)s Fahrzeug hinzugefügt."
+msgstr[1] "%(count)s Fahrzeuge hinzugefügt."
+
+msgid "Account added; no vehicles were added yet."
+msgstr "Konto angelegt; es wurden noch keine Fahrzeuge hinzugefügt."
+
+msgid "Go to the dashboard"
+msgstr "Zur Übersicht"
+
+msgid "This setup step has expired"
+msgstr "Dieser Einrichtungsschritt ist abgelaufen"
+
+msgid "The account was already added. Start vehicle selection again from the dashboard, or sync vehicles later from settings."
+msgstr "Das Konto wurde bereits angelegt. Die Fahrzeugauswahl erneut starten oder Fahrzeuge später über die Einstellungen synchronisieren."
+
+msgid "Back to setup"
+msgstr "Zurück zur Einrichtung"
+
+msgid "Accounts"
+msgstr "Konten"
+
+msgid "Label"
+msgstr "Label"
+
+msgid "State"
+msgstr "Zustand"
+
+msgid "Last run"
+msgstr "Letzter Lauf"
+
+msgid "never"
+msgstr "nie"
+
+msgid "Delete"
+msgstr "Löschen"
+
+msgid "No accounts yet."
+msgstr "Noch keine Konten."
+
+msgid "Add another account"
+msgstr "Weiteres Konto hinzufügen"
+
+msgid "Account"
+msgstr "Konto"
+
+msgid "archived"
+msgstr "archiviert"
+
+msgid "Delete account '%(label)s'?"
+msgstr "Konto „%(label)s“ löschen?"
+
+msgid "This removes the account, %(count)s vehicle and all of its stored data."
+msgid_plural "This removes the account, %(count)s vehicles and all of their stored data."
+msgstr[0] "Damit werden das Konto, %(count)s Fahrzeug und alle gespeicherten Daten entfernt."
+msgstr[1] "Damit werden das Konto, %(count)s Fahrzeuge und alle gespeicherten Daten entfernt."
+
+msgid "Backups are not touched: this data may still appear there until it ages out of retention."
+msgstr "Backups bleiben unberührt: Diese Daten können dort erscheinen, bis sie aus der Aufbewahrung herausfallen."
+
+msgid "Delete permanently"
+msgstr "Endgültig löschen"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "Delete vehicle '%(label)s'?"
+msgstr "Fahrzeug „%(label)s“ löschen?"
+
+msgid "This removes the vehicle and all of its stored data."
+msgstr "Damit werden das Fahrzeug und alle gespeicherten Daten entfernt."
+
+msgid "Deleted"
+msgstr "Gelöscht"
+
+msgid "The oldest remaining backup is %(days)s day(s) old; this data may still appear there until it ages out of retention."
+msgstr "Das älteste noch vorhandene Backup ist %(days)s Tag(e) alt; diese Daten können dort erscheinen, bis sie aus der Aufbewahrung herausfallen."
+
+msgid "No backups exist yet."
+msgstr "Es gibt noch keine Backups."
+
+msgid "Back to settings"
+msgstr "Zurück zu den Einstellungen"
+
+msgid "unknown"
+msgstr "unbekannt"
+
+msgid "%(hours)s h ago"
+msgstr "vor %(hours)s h"
+
+msgid "%(days)s d ago"
+msgstr "vor %(days)s d"
+
+msgid "fresh"
+msgstr "frisch"
+
+msgid "aging"
+msgstr "altert"
+
+msgid "stale"
+msgstr "veraltet"
+
+msgid "This account needs attention: %(reason)s"
+msgstr "Dieses Konto benötigt Aufmerksamkeit: %(reason)s"
+
+msgid "unknown reason"
+msgstr "unbekannter Grund"
+
+msgid "Data request '%(kind)s' needs attention: %(reason)s"
+msgstr "Datenanfrage „%(kind)s“ benötigt Aufmerksamkeit: %(reason)s"
+
+msgid "Backlog at risk for '%(kind)s': %(pending)s files waiting for download."
+msgstr "Rückstand bei „%(kind)s“ gefährdet: %(pending)s Dateien warten auf den Download."
+
+msgid "Retention at risk for '%(kind)s': the oldest waiting file is %(age)s old."
+msgstr "Aufbewahrung bei „%(kind)s“ gefährdet: die älteste wartende Datei ist %(age)s alt."
+
+msgid "Only empty deliveries so far (%(count)s), never any content."
+msgstr "Bisher nur leere Lieferungen (%(count)s), noch nie welche mit Inhalt."
+
+msgid "Only empty deliveries for a while: %(count)s since the last one with content, %(age)s ago."
+msgstr "Seit einer Weile nur leere Lieferungen: %(count)s seit der letzten mit Inhalt, vor %(age)s."
+
+msgid "No new delivery for '%(kind)s' in %(age)s."
+msgstr "Seit %(age)s keine neue Lieferung für „%(kind)s“."
+
+msgid "Even the newest value this vehicle ever reported (%(signal)s) is %(age)s old."
+msgstr "Selbst der neueste je gemeldete Wert dieses Fahrzeugs (%(signal)s) ist %(age)s alt."
+
+msgid "The portal failed on the last %(count)s runs in a row."
+msgstr "Das Portal ist bei den letzten %(count)s Läufen in Folge fehlgeschlagen."
+
+msgid "Last verified backup:"
+msgstr "Letztes geprüftes Backup:"
+
+msgid "Accounts needing attention:"
+msgstr "Konten, die Aufmerksamkeit benötigen:"
+
+msgid "no value"
+msgstr "kein Wert"
+
+msgid "measured"
+msgstr "gemessen"
+
+msgid "time zone unknown"
+msgstr "Zeitzone unbekannt"
+
+msgid "invalid timestamp"
+msgstr "ungültiger Zeitstempel"
+
+msgid "Signals"
+msgstr "Signale"
+
+msgid "Source field"
+msgstr "Quellfeld"
+
+msgid "Value"
+msgstr "Wert"
+
+msgid "Captured at"
+msgstr "Erfasst am"
+
+msgid "First seen"
+msgstr "Zuerst gesehen"
+
+msgid "No signal values yet."
+msgstr "Noch keine Signalwerte."
+
+msgid "Data requests"
+msgstr "Datenanfragen"
+
+msgid "Kind"
+msgstr "Art"
+
+msgid "Next due"
+msgstr "Nächste Fälligkeit"
+
+msgid "Last success"
+msgstr "Letzter Erfolg"
+
+msgid "No data requests yet."
+msgstr "Noch keine Datenanfragen."
+
+msgid "Collector history"
+msgstr "Abruf-Verlauf"
+
+msgid "Started"
+msgstr "Gestartet"
+
+msgid "Outcome"
+msgstr "Ergebnis"
+
+msgid "Listed"
+msgstr "Gelistet"
+
+msgid "Downloaded"
+msgstr "Heruntergeladen"
+
+msgid "Pending"
+msgstr "Ausstehend"
+
+msgid "No collector runs yet."
+msgstr "Noch keine Abrufe."
+
+msgid "Odometer"
+msgstr "Kilometerstand"
+
+msgid "State of charge (SoC)"
+msgstr "Ladestand (SoC)"
+
+msgid "Fuel level"
+msgstr "Tankfüllstand"
+
+msgid "Range"
+msgstr "Reichweite"
+
+msgid "Outdoor temperature"
+msgstr "Außentemperatur"
+
+msgid "Battery temperature"
+msgstr "Batterietemperatur"
+
+msgid "Charging state"
+msgstr "Ladezustand"
+
+msgid "Charging power"
+msgstr "Ladeleistung"
+
+msgid "Plug"
+msgstr "Stecker"
+
+msgid "Data explorer"
+msgstr "Daten-Explorer"
+
+msgid "Vehicle"
+msgstr "Fahrzeug"
+
+msgid "Search"
+msgstr "Suche"
+
+msgid "Cluster"
+msgstr "Cluster"
+
+msgid "Apply"
+msgstr "Anwenden"
+
+msgid "No dictionary catalog has been imported yet, so fields are shown with their raw names only."
+msgstr "Es wurde noch kein Dictionary-Katalog importiert; Felder werden daher nur mit ihrem rohen Namen angezeigt."
+
+msgid "Import one in Settings"
+msgstr "Einen in den Einstellungen importieren"
+
+msgid "Field"
+msgstr "Feld"
+
+msgid "Data points"
+msgstr "Datenpunkte"
+
+msgid "Distinct values"
+msgstr "Unterschiedliche Werte"
+
+msgid "Last seen"
+msgstr "Zuletzt gesehen"
+
+msgid "Last value"
+msgstr "Letzter Wert"
+
+msgid "Mapped"
+msgstr "Zugeordnet"
+
+msgid "yes"
+msgstr "ja"
+
+msgid "no"
+msgstr "nein"
+
+msgid "Page %(page)s of %(total)s"
+msgstr "Seite %(page)s von %(total)s"
+
+msgid "Previous"
+msgstr "Zurück"
+
+msgid "Next"
+msgstr "Weiter"
+
+msgid "No fields match this filter."
+msgstr "Kein Feld passt zu diesem Filter."
+
+msgid "Catalog import"
+msgstr "Katalog-Import"
+
+msgid "The uploaded file exceeds the 50 MB limit."
+msgstr "Die hochgeladene Datei überschreitet das 50-MB-Limit."
+
+msgid "The upload could not be read as a file."
+msgstr "Der Upload konnte nicht als Datei gelesen werden."
+
+msgid "Could not import this file: %(reason)s"
+msgstr "Diese Datei konnte nicht importiert werden: %(reason)s"
+
+msgid "Imported a %(kind)s dictionary as version %(version)s."
+msgstr "Ein %(kind)s-Dictionary wurde als Version %(version)s importiert."
+
+msgid "%(count)s new entries"
+msgstr "%(count)s neue Einträge"
+
+msgid "%(count)s updated entries"
+msgstr "%(count)s aktualisierte Einträge"
+
+msgid "%(count)s duplicate keys in the file (the last occurrence was kept)"
+msgstr "%(count)s doppelte Schlüssel in der Datei (der letzte Eintrag wurde übernommen)"
+
+msgid "Back to Settings"
+msgstr "Zurück zu den Einstellungen"
+
+msgid "Back to the data explorer"
+msgstr "Zurück zum Daten-Explorer"
+
+msgid "Seen"
+msgstr "Gesehen"
+
+msgid "No values recorded for this field."
+msgstr "Für dieses Feld sind keine Werte erfasst."
+
+msgid "Dictionary catalog"
+msgstr "Dictionary-Katalog"
+
+msgid "Provider"
+msgstr "Anbieter"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Entries"
+msgstr "Einträge"
+
+msgid "No catalog imported yet."
+msgstr "Noch kein Katalog importiert."
+
+msgid "Catalog version (optional, derived from the filename if left empty)"
+msgstr "Katalogversion (optional, wird sonst aus dem Dateinamen abgeleitet)"
+
+msgid "Dictionary PDF"
+msgstr "Dictionary-PDF"
+
+msgid "Import"
+msgstr "Importieren"
+
+msgid "Sign out"
+msgstr "Abmelden"
+
+msgid "Sign in"
+msgstr "Anmelden"
+
+msgid "Password"
+msgstr "Passwort"
+
+msgid "Invalid password"
+msgstr "Ungültiges Passwort"
+
+msgid "Too many failed attempts. Try again later."
+msgstr "Zu viele fehlgeschlagene Versuche. Bitte später erneut versuchen."
+
+msgid "The passwords do not match."
+msgstr "Die Passwörter stimmen nicht überein."
+
+msgid "The password is not acceptable: %(reason)s"
+msgstr "Das Passwort ist nicht zulässig: %(reason)s"
+
+msgid "A password is already set. Please sign in."
+msgstr "Es ist bereits ein Passwort festgelegt. Bitte anmelden."
+
+msgid "Set a password"
+msgstr "Passwort festlegen"
+
+msgid "No password is set yet. Choose one to protect this Carchive installation."
+msgstr "Es ist noch kein Passwort festgelegt. Wähle eines, um diese Carchive-Installation zu schützen."
+
+msgid "New password"
+msgstr "Neues Passwort"
+
+msgid "Repeat password"
+msgstr "Passwort wiederholen"
+
+msgid "At least %(count)s characters."
+msgstr "Mindestens %(count)s Zeichen."
+
+msgid "Set password and sign in"
+msgstr "Passwort festlegen und anmelden"
+
+msgid "The login system is unavailable. Check the server log."
+msgstr "Die Anmeldung ist nicht verfügbar. Bitte das Server-Log prüfen."
+
+msgid "Change password"
+msgstr "Passwort ändern"
+
+msgid "Password changed. All other sessions were ended."
+msgstr "Passwort geändert. Alle anderen Sitzungen wurden beendet."
+
+msgid "The new passwords do not match."
+msgstr "Die neuen Passwörter stimmen nicht überein."
+
+msgid "The current password is wrong."
+msgstr "Das aktuelle Passwort ist falsch."
+
+msgid "The new password is not acceptable: %(reason)s"
+msgstr "Das neue Passwort ist nicht zulässig: %(reason)s"
+
+msgid "Current password"
+msgstr "Aktuelles Passwort"
+
+msgid "Repeat new password"
+msgstr "Neues Passwort wiederholen"
+
+msgid "Replace portal password"
+msgstr "Portal-Passwort ersetzen"
+
+msgid "The new password is tested against the portal before it is stored. The account and its data are kept."
+msgstr "Das neue Passwort wird vor dem Speichern am Portal getestet. Konto und Daten bleiben erhalten."
+
+msgid "Portal password replaced. The next collection pass uses it."
+msgstr "Portal-Passwort ersetzt. Der nächste Abruf verwendet es."
+
+msgid "The password must be 1 to %(count)s characters long."
+msgstr "Das Passwort muss 1 bis %(count)s Zeichen lang sein."
+
+msgid "No credentials are stored for this account. Remove it and add it again."
+msgstr "Für dieses Konto sind keine Zugangsdaten gespeichert. Konto entfernen und neu anlegen."
+
+msgid "The portal did not accept the login: %(reason)s"
+msgstr "Das Portal hat die Anmeldung nicht akzeptiert: %(reason)s"
+
+msgid "The password could not be stored: %(reason)s"
+msgstr "Das Passwort konnte nicht gespeichert werden: %(reason)s"
+
+msgid "New portal password"
+msgstr "Neues Portal-Passwort"
+
+msgid "Replace password"
+msgstr "Passwort ersetzen"
+
+msgid "Backups"
+msgstr "Backups"
+
+msgid "%(name)s is intact."
+msgstr "%(name)s ist in Ordnung."
+
+msgid "%(name)s: the checksum is missing or does not match."
+msgstr "%(name)s: Die Prüfsumme fehlt oder stimmt nicht."
+
+msgid "%(name)s: the content cannot be read. The passphrase is wrong or the archive is damaged."
+msgstr "%(name)s: Der Inhalt ist nicht lesbar. Die Passphrase ist falsch oder das Archiv beschädigt."
+
+msgid "Enter the passphrase to check %(name)s."
+msgstr "Passphrase eingeben, um %(name)s zu prüfen."
+
+msgid "The configured passphrase file cannot be used. See the server log."
+msgstr "Die konfigurierte Passphrase-Datei ist nicht nutzbar. Siehe Server-Log."
+
+msgid "The passphrase must be at most %(count)s characters long."
+msgstr "Die Passphrase darf höchstens %(count)s Zeichen lang sein."
+
+msgid "The passphrase must be at least %(count)s characters long."
+msgstr "Die Passphrase muss mindestens %(count)s Zeichen lang sein."
+
+msgid "Another backup operation is running. Try again in a moment."
+msgstr "Ein anderer Backup-Vorgang läuft. Gleich noch einmal versuchen."
+
+msgid "Created"
+msgstr "Erstellt"
+
+msgid "Size"
+msgstr "Größe"
+
+msgid "Encrypted"
+msgstr "Verschlüsselt"
+
+msgid "Credentials"
+msgstr "Zugangsdaten"
+
+msgid "Checksum"
+msgstr "Prüfsumme"
+
+msgid "ok"
+msgstr "ok"
+
+msgid "failed"
+msgstr "fehlgeschlagen"
+
+msgid "Download"
+msgstr "Herunterladen"
+
+msgid "Passphrase"
+msgstr "Passphrase"
+
+msgid "Check"
+msgstr "Prüfen"
+
+msgid "No backups yet."
+msgstr "Noch keine Backups."
+
+msgid "Back up now"
+msgstr "Jetzt sichern"
+
+msgid "Backup created: %(name)s"
+msgstr "Backup erstellt: %(name)s"
+
+msgid "Backup %(name)s was created but failed its check. See the server log."
+msgstr "Backup %(name)s wurde erstellt, hat die Prüfung aber nicht bestanden. Siehe Server-Log."
+
+msgid "Credentials can only be included in an encrypted backup. Enable encryption or leave the credentials out."
+msgstr "Zugangsdaten können nur in ein verschlüsseltes Backup. Verschlüsselung aktivieren oder die Zugangsdaten weglassen."
+
+msgid "Enter a passphrase to encrypt the backup."
+msgstr "Passphrase zum Verschlüsseln des Backups eingeben."
+
+msgid "The passphrases do not match."
+msgstr "Die Passphrasen stimmen nicht überein."
+
+msgid "The backup could not be created. See the server log."
+msgstr "Das Backup konnte nicht erstellt werden. Siehe Server-Log."
+
+msgid "Include credentials (secrets.toml and vault.key)"
+msgstr "Zugangsdaten einschließen (secrets.toml und vault.key)"
+
+msgid "Encrypt"
+msgstr "Verschlüsseln"
+
+msgid "Also store credentials unencrypted"
+msgstr "Zugangsdaten auch unverschlüsselt sichern"
+
+msgid "An encrypted backup uses the configured passphrase file."
+msgstr "Ein verschlüsseltes Backup nutzt die konfigurierte Passphrase-Datei."
+
+msgid "Passphrase (only for an encrypted backup, at least %(count)s characters)"
+msgstr "Passphrase (nur für ein verschlüsseltes Backup, mindestens %(count)s Zeichen)"
+
+msgid "Repeat passphrase"
+msgstr "Passphrase wiederholen"
+
+msgid "Restoring replaces the live database and needs the server stopped: run \"carchive backup restore\" on the command line."
+msgstr "Wiederherstellen ersetzt die laufende Datenbank und braucht einen gestoppten Server: \"carchive backup restore\" auf der Kommandozeile ausführen."
+
+msgid "Replace portal password for '%(label)s'"
+msgstr "Portal-Passwort für '%(label)s' ersetzen"
+
+msgid "Back to accounts"
+msgstr "Zurück zu den Konten"
+
+msgid "Portal accounts and the vehicles they report. Each account's stored password can be replaced if the portal changes it."
+msgstr "Portal-Konten und die Fahrzeuge, die sie melden. Das gespeicherte Passwort eines Kontos kann ersetzt werden, wenn sich das Portal-Passwort ändert."
+
+msgid "Carchive ships with the manufacturer's dictionary already built in; import one here only to add a different provider or a newer version than the bundled one."
+msgstr "Carchive bringt das Dictionary des Herstellers bereits mit; importiere hier eins nur für einen anderen Provider oder eine neuere Version als die mitgelieferte."
+
+msgid "Security"
+msgstr "Sicherheit"
+
+msgid "Back to vehicles"
+msgstr "Zurück zu den Fahrzeugen"
+
+msgid "Last run:"
+msgstr "Letzter Lauf:"
+
+msgid "Delete account"
+msgstr "Konto löschen"
+
+msgid "Uploading a historical export file will also live here once built; for now this page only covers backups."
+msgstr "Der Upload eines historischen Exports wird später ebenfalls hierher kommen; aktuell deckt diese Seite nur Backups ab."
+
+msgid "Account and vehicle management live on their own page:"
+msgstr "Konten- und Fahrzeugverwaltung haben eine eigene Seite:"
+
+msgid "Language"
+msgstr "Sprache"

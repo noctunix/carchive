@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% import "_notice_text.html" as notice_macros with context %}
+{% block content %}
+<h1>{{ detail.label }}</h1>
+<p class="muted">{{ detail.brand|brand_label }}</p>
+
+{% if detail.notices %}
+<ul class="notice-list">
+  {% for notice in detail.notices %}
+  <li class="notice notice-{{ notice.severity }}">{{ notice_macros.notice_text(notice) }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<h2>{{ _("Signals") }}</h2>
+{% if detail.signals %}
+{% for signal, fields in detail.signals.items() %}
+<h3>{{ signal|signal_label }} <span class="raw-signal">{{ signal }}</span></h3>
+<table>
+  <tr>
+    <th>{{ _("Source field") }}</th>
+    <th>{{ _("Value") }}</th>
+    <th>{{ _("Captured at") }}</th>
+    <th>{{ _("First seen") }}</th>
+  </tr>
+  {% for f in fields %}
+  <tr>
+    <td>{{ f.source_field }}</td>
+    <td class="{% if f.kind == "enum" %}raw-value{% endif %}">{{ f.value|format_number(signal) }}{% if f.unit %} {{ f.unit }}{% endif %}</td>
+    <td>
+      {% if f.captured_at %}{{ f.captured_at | datetime }}{% else %}{{ _("unknown") }}{% endif %}
+      {% if f.captured_at_quality in ("tz_unknown", "invalid") %}
+      <span class="quality-badge quality-{{ f.captured_at_quality }}">
+        {% if f.captured_at_quality == "tz_unknown" %}{{ _("time zone unknown") }}{% else %}{{ _("invalid timestamp") }}{% endif %}
+      </span>
+      {% endif %}
+    </td>
+    <td>{{ f.first_seen_at | datetime }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endfor %}
+{% else %}
+<p>{{ _("No signal values yet.") }}</p>
+{% endif %}
+
+<h2>{{ _("Data requests") }}</h2>
+{% if detail.data_requests %}
+<table>
+  <tr>
+    <th>{{ _("Kind") }}</th>
+    <th>{{ _("State") }}</th>
+    <th>{{ _("Next due") }}</th>
+    <th>{{ _("Last success") }}</th>
+  </tr>
+  {% for request in detail.data_requests %}
+  <tr>
+    <td>{{ request.kind }}</td>
+    <td>
+      {{ request.state }}
+      {% if request.state_reason %}&mdash; {{ request.state_reason }}{% endif %}
+    </td>
+    <td>{% if request.next_due_at %}{{ request.next_due_at | datetime }}{% else %}{{ _("never") }}{% endif %}</td>
+    <td>{% if request.last_success_at %}{{ request.last_success_at | datetime }}{% else %}{{ _("never") }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>{{ _("No data requests yet.") }}</p>
+{% endif %}
+
+<h2>{{ _("Collector history") }}</h2>
+{% if detail.collector_runs %}
+<table>
+  <tr>
+    <th>{{ _("Started") }}</th>
+    <th>{{ _("Kind") }}</th>
+    <th>{{ _("Outcome") }}</th>
+    <th>{{ _("Listed") }}</th>
+    <th>{{ _("Downloaded") }}</th>
+    <th>{{ _("Pending") }}</th>
+  </tr>
+  {% for run in detail.collector_runs %}
+  <tr>
+    <td>{{ run.started_at | datetime }}</td>
+    <td>{% if run.request_kind %}{{ run.request_kind }}{% else %}&mdash;{% endif %}</td>
+    <td>{{ run.outcome }}</td>
+    <td>{% if run.listed is not none %}{{ run.listed }}{% else %}&mdash;{% endif %}</td>
+    <td>{% if run.downloaded is not none %}{{ run.downloaded }}{% else %}&mdash;{% endif %}</td>
+    <td>{% if run.pending is not none %}{{ run.pending }}{% else %}&mdash;{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>{{ _("No collector runs yet.") }}</p>
+{% endif %}
+{% endblock %}

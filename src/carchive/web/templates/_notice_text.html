@@ -1,0 +1,25 @@
+{% macro notice_text(n) %}
+{%- if n.kind == "account_needs_attention" -%}
+{{ _("This account needs attention: %(reason)s", reason=n.params.reason or _("unknown reason")) }}
+{%- elif n.kind == "request_needs_attention" -%}
+{{ _("Data request '%(kind)s' needs attention: %(reason)s", kind=n.params.kind, reason=n.params.reason or _("unknown reason")) }}
+{%- elif n.kind == "backlog_at_risk" -%}
+{{ _("Backlog at risk for '%(kind)s': %(pending)s files waiting for download.", **n.params) }}
+{%- elif n.kind == "retention_at_risk" -%}
+{{ _("Retention at risk for '%(kind)s': the oldest waiting file is %(age)s old.", kind=n.params.kind, age=n.params.age_s|duration) }}
+{%- elif n.kind == "no_content" -%}
+{%- if n.params.last_content_age_s is none -%}
+{{ _("Only empty deliveries so far (%(count)s), never any content.", count=n.params.empty_count) }}
+{%- else -%}
+{{ _("Only empty deliveries for a while: %(count)s since the last one with content, %(age)s ago.", count=n.params.empty_count, age=n.params.last_content_age_s|duration) }}
+{%- endif -%}
+{%- elif n.kind == "no_deliveries" -%}
+{{ _("No new delivery for '%(kind)s' in %(age)s.", kind=n.params.kind, age=n.params.since_age_s|duration) }}
+{%- elif n.kind == "stale_values" -%}
+{{ _("Even the newest value this vehicle ever reported (%(signal)s) is %(age)s old.", signal=n.params.signal, age=n.params.newest_age_s|duration) }}
+{%- elif n.kind == "portal_unavailable" -%}
+{{ _("The portal failed on the last %(count)s runs in a row.", **n.params) }}
+{%- else -%}
+{{ n.kind }}
+{%- endif -%}
+{% endmacro %}
