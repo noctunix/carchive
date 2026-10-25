@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("Deliveries") }}</h1>
+
+{% if not vehicles %}
+<div class="empty-state">
+  <p>{{ _("No vehicles yet.") }}</p>
+  <p><a href="/setup">{{ _("Set up") }}</a></p>
+</div>
+{% else %}
+<form method="get" action="/deliveries">
+  <p>
+    <label for="vehicle_id">{{ _("Vehicle") }}</label>
+    <select id="vehicle_id" name="vehicle_id">
+      {% for vehicle in vehicles %}
+      <option value="{{ vehicle.id }}" {% if vehicle.id == selected_vehicle_id %}selected{% endif %}>{{ vehicle.label }}</option>
+      {% endfor %}
+    </select>
+  </p>
+  <button type="submit">{{ _("Apply") }}</button>
+</form>
+
+{% if result and result.items %}
+<table>
+  <tr>
+    <th>{{ _("Delivered") }}</th>
+    <th>{{ _("Fetched") }}</th>
+    <th>{{ _("Kind") }}</th>
+    <th>{{ _("Content") }}</th>
+    <th>{{ _("Size") }}</th>
+    <th>{{ _("Parse status") }}</th>
+    <th>{{ _("New values") }}</th>
+    <th>{{ _("New values' time span") }}</th>
+  </tr>
+  {% for row in result.items %}
+  <tr class="{% if not row.has_content %}muted{% endif %}">
+    <td>
+      <a href="/deliveries/{{ row.id }}">
+        {{ row.remote_name }}
+        <br><span class="muted">
+          {% if row.delivered_at %}{{ row.delivered_at | datetime }} ({{ row.delivered_age_s | age }}){% else %}{{ _("unknown") }}{% endif %}
+        </span>
+      </a>
+    </td>
+    <td>{{ row.fetched_at | datetime }}</td>
+    <td>{{ row.kind }} <span class="muted">({{ row.source }})</span></td>
+    <td>{% if row.has_content %}{{ _("content") }}{% else %}{{ _("placeholder") }}{% endif %}</td>
+    <td>{{ row.size_bytes | filesize }}</td>
+    <td>{{ row.parse_state }}</td>
+    <td>{{ row.new_point_count }}</td>
+    <td>
+      {% if row.new_captured_min and row.new_captured_max %}
+      {{ row.new_captured_min | datetime }} &ndash; {{ row.new_captured_max | datetime }}
+      {% else %}&mdash;{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% if result.total_pages > 1 %}
+<p class="muted">
+  {{ _("Page %(page)s of %(total)s", page=page, total=result.total_pages) }}
+  {% if page > 1 %}<a href="/deliveries?vehicle_id={{ selected_vehicle_id }}&page={{ page - 1 }}">{{ _("Previous") }}</a>{% endif %}
+  {% if page < result.total_pages %}<a href="/deliveries?vehicle_id={{ selected_vehicle_id }}&page={{ page + 1 }}">{{ _("Next") }}</a>{% endif %}
+</p>
+{% endif %}
+
+{% elif result %}
+<div class="empty-state">
+  <p>{{ _("No deliveries recorded yet for this vehicle.") }}</p>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

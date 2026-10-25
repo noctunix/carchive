@@ -175,6 +175,20 @@ def build_templates(translations: dict[str, gettext.NullTranslations]) -> Jinja2
         locale = _BABEL_LOCALES.get(current_language.get(), "en_US")
         return format_datetime(value.astimezone(), format="medium", locale=locale)
 
+    def filesize_filter(value: object) -> object:
+        """Render a byte count as a short, human-readable size (B/kB/MB/...).
+
+        Anything that is not a plain `int` is returned unchanged.
+        """
+        if isinstance(value, bool) or not isinstance(value, int):
+            return value
+        size = float(value)
+        for unit in ("B", "kB", "MB", "GB", "TB"):
+            if size < 1000 or unit == "TB":
+                return f"{int(size)} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+            size /= 1000
+        return f"{value} B"  # unreachable, satisfies static analysis of the loop above
+
     env.filters["datetime"] = datetime_filter
     env.filters["age"] = age_filter
     env.filters["duration"] = duration_filter
@@ -182,6 +196,7 @@ def build_templates(translations: dict[str, gettext.NullTranslations]) -> Jinja2
     env.filters["signal_label"] = signal_label_filter
     env.filters["brand_label"] = brand_label_filter
     env.filters["format_number"] = format_number_filter
+    env.filters["filesize"] = filesize_filter
 
     def _request_context(request: Request) -> dict[str, Any]:
         state = request.scope.get("state", {})

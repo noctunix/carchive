@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ detail.remote_name }}</h1>
+<p class="muted">
+  {{ detail.kind }} ({{ detail.source }})
+  &mdash;
+  {% if detail.delivered_at %}{{ _("delivered") }} {{ detail.delivered_at | datetime }}{% else %}{{ _("delivery time unknown") }}{% endif %},
+  {{ _("fetched") }} {{ detail.fetched_at | datetime }}
+</p>
+<p><a href="/deliveries?vehicle_id={{ detail.vehicle_id }}">{{ _("Back to the deliveries list") }}</a></p>
+
+{% if detail.degraded %}
+<p class="notice notice-warning">
+  {{ _("The original payload is no longer available, so only the values this delivery first reported can be shown; the search and \"only new\" filters have no effect here.") }}
+</p>
+{% endif %}
+
+<h2>{{ _("Summary") }}</h2>
+<p>
+  {{ _("%(total)s values, %(new)s new, %(known)s already known.", total=detail.summary.total_values, new=detail.summary.new_values, known=detail.summary.known_values if detail.summary.known_values is not none else _("unknown")) }}
+</p>
+<p>
+  {% if detail.summary.captured_max %}
+  {{ _("Newest measurement:") }} {{ detail.summary.captured_max | datetime }} ({{ detail.summary.captured_max_age_s | age }})
+  {% else %}
+  {{ _("No measurement time could be determined.") }}
+  {% endif %}
+</p>
+
+<form method="get" action="/deliveries/{{ detail.id }}">
+  <p>
+    <label for="q">{{ _("Search") }}</label>
+    <input id="q" name="q" value="{{ query }}">
+  </p>
+  <p>
+    <label for="only_new">
+      <input type="checkbox" id="only_new" name="only_new" value="true" {% if only_new %}checked{% endif %}>
+      {{ _("Only new values") }}
+    </label>
+  </p>
+  <button type="submit">{{ _("Apply") }}</button>
+</form>
+
+{% if detail.values %}
+<table>
+  <tr>
+    <th>{{ _("Field") }}</th>
+    <th>{{ _("Value") }}</th>
+    <th>{{ _("Captured at") }}</th>
+    <th>{{ _("Status") }}</th>
+  </tr>
+  {% for value in detail.values %}
+  <tr>
+    <td>{{ value.field_name }}</td>
+    <td class="raw-value">{% if value.value_raw is not none %}{{ value.value_raw }}{% else %}&mdash;{% endif %}</td>
+    <td>
+      {% if value.captured_at %}{{ value.captured_at | datetime }}{% else %}{{ _("unknown") }}{% endif %}
+      {% if value.captured_at_quality in ("tz_unknown", "invalid") %}
+      <span class="quality-badge quality-{{ value.captured_at_quality }}">
+        {% if value.captured_at_quality == "tz_unknown" %}{{ _("time zone unknown") }}{% else %}{{ _("invalid timestamp") }}{% endif %}
+      </span>
+      {% endif %}
+    </td>
+    <td>
+      {% if value.status == "new" %}
+      {{ _("new") }}
+      {% else %}
+      {{ _("known since %(first_seen)s", first_seen=value.first_seen_at | datetime) }}
+      <a href="/deliveries/{{ value.first_delivery_id }}">{{ _("show that delivery") }}</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% if detail.total_pages > 1 %}
+<p class="muted">
+  {{ _("Page %(page)s of %(total)s", page=detail.page, total=detail.total_pages) }}
+  {% if detail.page > 1 %}<a href="/deliveries/{{ detail.id }}?only_new={{ only_new | lower }}&q={{ query | urlencode }}&page={{ detail.page - 1 }}">{{ _("Previous") }}</a>{% endif %}
+  {% if detail.page < detail.total_pages %}<a href="/deliveries/{{ detail.id }}?only_new={{ only_new | lower }}&q={{ query | urlencode }}&page={{ detail.page + 1 }}">{{ _("Next") }}</a>{% endif %}
+</p>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <p>{{ _("No values match this filter.") }}</p>
+</div>
+{% endif %}
+{% endblock %}

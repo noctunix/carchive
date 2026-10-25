@@ -3,6 +3,7 @@
 {% block content %}
 <h1>{{ detail.label }}</h1>
 <p class="muted">{{ detail.brand|brand_label }}</p>
+<p><a href="/deliveries?vehicle_id={{ detail.id }}">{{ _("Deliveries for this vehicle") }}</a></p>
 
 {% if detail.notices %}
 <ul class="notice-list">

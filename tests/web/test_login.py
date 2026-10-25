@@ -121,7 +121,7 @@ def fresh_app(
 
 async def test_get_without_session_redirects_to_login(app: FastAPI) -> None:
     async with _anon(app) as client:
-        for path in ("/", "/settings", "/accounts", "/vehicles", "/data", "/setup"):
+        for path in ("/", "/settings", "/accounts", "/vehicles", "/data", "/deliveries", "/setup"):
             response = await client.get(path)
             assert response.status_code == 303, path
             assert response.headers["location"] == "/login"

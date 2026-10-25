@@ -31,6 +31,7 @@ from carchive.web.routes import (
     backups,
     dashboard,
     data,
+    deliveries,
     health,
     lang,
     login,
@@ -122,6 +123,7 @@ def create_app(services: AppServices, settings: Settings, *, version: str = "dev
     app.include_router(backups.router)
     app.include_router(dashboard.router)
     app.include_router(data.router)
+    app.include_router(deliveries.router)
     app.include_router(lang.router)
     app.include_router(login.router)
     app.include_router(setup.router)

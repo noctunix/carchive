@@ -684,3 +684,84 @@ msgstr "Konten- und Fahrzeugverwaltung haben eine eigene Seite:"
 
 msgid "Language"
 msgstr "Sprache"
+
+msgid "Deliveries"
+msgstr "Lieferungen"
+
+msgid "Delivered"
+msgstr "Geliefert"
+
+msgid "Fetched"
+msgstr "Abgerufen"
+
+msgid "Content"
+msgstr "Inhalt"
+
+msgid "Size"
+msgstr "Größe"
+
+msgid "Parse status"
+msgstr "Parse-Status"
+
+msgid "New values"
+msgstr "Neue Werte"
+
+msgid "New values' time span"
+msgstr "Messzeitraum der neuen Werte"
+
+msgid "content"
+msgstr "Inhalt"
+
+msgid "placeholder"
+msgstr "Platzhalter"
+
+msgid "No deliveries recorded yet for this vehicle."
+msgstr "Für dieses Fahrzeug sind noch keine Lieferungen erfasst."
+
+msgid "Deliveries for this vehicle"
+msgstr "Lieferungen dieses Fahrzeugs"
+
+msgid "delivered"
+msgstr "geliefert"
+
+msgid "delivery time unknown"
+msgstr "Lieferzeit unbekannt"
+
+msgid "fetched"
+msgstr "abgerufen"
+
+msgid "Back to the deliveries list"
+msgstr "Zurück zur Liste der Lieferungen"
+
+msgid "The original payload is no longer available, so only the values this delivery first reported can be shown; the search and \"only new\" filters have no effect here."
+msgstr "Die ursprünglichen Rohdaten sind nicht mehr verfügbar, daher können nur die Werte gezeigt werden, die diese Lieferung erstmals gemeldet hat; Suche und Filter \"nur neue\" wirken hier nicht."
+
+msgid "Summary"
+msgstr "Zusammenfassung"
+
+msgid "%(total)s values, %(new)s new, %(known)s already known."
+msgstr "%(total)s Werte, %(new)s neu, %(known)s bereits bekannt."
+
+msgid "Newest measurement:"
+msgstr "Neuester Messzeitpunkt:"
+
+msgid "No measurement time could be determined."
+msgstr "Es konnte kein Messzeitpunkt bestimmt werden."
+
+msgid "Only new values"
+msgstr "Nur neue Werte"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "new"
+msgstr "neu"
+
+msgid "known since %(first_seen)s"
+msgstr "bekannt seit %(first_seen)s"
+
+msgid "show that delivery"
+msgstr "diese Lieferung anzeigen"
+
+msgid "No values match this filter."
+msgstr "Keine Werte entsprechen diesem Filter."
