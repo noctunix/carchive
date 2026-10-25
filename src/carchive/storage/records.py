@@ -276,6 +276,61 @@ class FieldValueRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class DeliverySummaryRecord:
+    """One `deliveries` row for one vehicle, with its new-value activity, for the deliveries list.
+
+    Attributes:
+        source: `"portal"` for a delivery tied to a `data_requests` row, `"import"` for one
+            tied to an `import_batches` row.
+        raw_available: whether `raw_payload` currently holds bytes (not yet purged, and not
+            a content-less placeholder).
+        new_point_count: how many `data_points` rows carry this delivery as their
+            `first_delivery_id`, i.e. values this delivery was the first to report.
+        new_captured_min: the earliest valid `captured_at` among those new points, or `None`
+            if none has one.
+        new_captured_max: the latest valid `captured_at` among those new points, or `None`.
+    """
+
+    id: UUID
+    kind: str
+    source: str
+    remote_name: str
+    delivered_at: datetime | None
+    fetched_at: datetime
+    has_content: bool
+    size_bytes: int
+    parse_state: str
+    raw_available: bool
+    new_point_count: int
+    new_captured_min: datetime | None
+    new_captured_max: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
+class DeliveryDetailRecord(DeliverySummaryRecord):
+    """A `DeliverySummaryRecord` plus the vehicle it belongs to, for the delivery detail page."""
+
+    vehicle_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class FirstSeenPointRecord:
+    """One `data_points` row whose `first_delivery_id` is the delivery being inspected.
+
+    Used only when a delivery's raw payload is unavailable (purged, or never stored for a
+    placeholder): without the original bytes to re-parse, only the values this delivery is
+    recorded as the first source of can be shown; values it merely repeated are invisible.
+    """
+
+    key: str
+    field_name: str
+    value_raw: str | None
+    captured_at: datetime | None
+    captured_at_quality: str
+    first_seen_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class DeliveryActivitySummary:
     """Delivery activity over a set of data requests, for dashboard monitoring.
 

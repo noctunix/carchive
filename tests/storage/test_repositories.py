@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from carchive.core.models import DataPoint, SignalValue, TimestampQuality
 from carchive.storage.db import Database
+from carchive.storage.dedup import dedup_key as compute_dedup_key
 from carchive.storage.migrate import upgrade_to_head
 from carchive.storage.repositories import (
     AccountRepository,
@@ -520,6 +521,158 @@ class TestDeliveryRepository:
         async with db.write() as conn:
             assert await repo.purge_raw_payloads(conn, cutoff=_NOW - timedelta(days=30)) == 0
 
+    async def test_list_for_vehicle_orders_and_counts_new_points(self, db: Database) -> None:
+        account_id = await _seed_account(db)
+        vehicle_id = await _seed_vehicle(db, account_id)
+        requests = DataRequestRepository()
+        repo = DeliveryRepository()
+        points = DataPointRepository()
+        async with db.write() as conn:
+            request_id = await requests.upsert(
+                conn, vehicle_id=vehicle_id, kind="partial", remote_id="r", interval_s=900
+            )
+            older = await repo.add(
+                conn,
+                data_request_id=request_id,
+                import_batch_id=None,
+                remote_name="older.zip",
+                delivered_at=_NOW - timedelta(days=2),
+                fetched_at=_NOW - timedelta(days=2),
+                has_content=True,
+                sha256="a" * 64,
+                size_bytes=10,
+                parse_state="parsed",
+                parser_version="v1",
+                raw_payload=b"x",
+            )
+            newer = await repo.add(
+                conn,
+                data_request_id=request_id,
+                import_batch_id=None,
+                remote_name="newer.zip",
+                delivered_at=_NOW - timedelta(days=1),
+                fetched_at=_NOW - timedelta(days=1),
+                has_content=True,
+                sha256="b" * 64,
+                size_bytes=20,
+                parse_state="parsed",
+                parser_version="v1",
+                raw_payload=b"y",
+            )
+            unconfirmed = await repo.add(
+                conn,
+                data_request_id=request_id,
+                import_batch_id=None,
+                remote_name="unconfirmed.zip",
+                delivered_at=None,
+                fetched_at=_NOW,
+                has_content=True,
+                sha256="c" * 64,
+                size_bytes=30,
+                parse_state="parsed",
+                parser_version="v1",
+                raw_payload=b"z",
+            )
+            await points.upsert_many(
+                conn,
+                vehicle_id=vehicle_id,
+                delivery_id=newer,
+                points=[
+                    DataPoint(
+                        key="k1",
+                        field_name="mileage",
+                        value_raw="1",
+                        captured_at=_NOW - timedelta(days=1),
+                        captured_at_quality=TimestampQuality.EXACT,
+                    )
+                ],
+                seen_at=_NOW,
+            )
+
+        async with db.read() as conn:
+            records, total = await repo.list_for_vehicle(conn, vehicle_id, limit=50, offset=0)
+
+        assert total == 3
+        # Deliveries with a known `delivered_at` sort before the unconfirmed one, newest first.
+        assert [record.id for record in records] == [newer, older, unconfirmed]
+        newer_record = records[0]
+        assert newer_record.new_point_count == 1
+        assert newer_record.new_captured_min == _NOW - timedelta(days=1)
+        assert newer_record.new_captured_max == _NOW - timedelta(days=1)
+        assert records[1].new_point_count == 0
+        assert records[1].new_captured_min is None
+
+    async def test_list_for_vehicle_paginates(self, db: Database) -> None:
+        account_id = await _seed_account(db)
+        vehicle_id = await _seed_vehicle(db, account_id)
+        requests = DataRequestRepository()
+        repo = DeliveryRepository()
+        async with db.write() as conn:
+            request_id = await requests.upsert(
+                conn, vehicle_id=vehicle_id, kind="partial", remote_id="r", interval_s=900
+            )
+            for i in range(3):
+                await repo.add(
+                    conn,
+                    data_request_id=request_id,
+                    import_batch_id=None,
+                    remote_name=f"f{i}.zip",
+                    delivered_at=_NOW - timedelta(days=i),
+                    fetched_at=_NOW - timedelta(days=i),
+                    has_content=True,
+                    sha256=f"{i}" * 64,
+                    size_bytes=1,
+                    parse_state="parsed",
+                    parser_version="v1",
+                    raw_payload=None,
+                )
+
+        async with db.read() as conn:
+            first_page, total = await repo.list_for_vehicle(conn, vehicle_id, limit=2, offset=0)
+            second_page, _ = await repo.list_for_vehicle(conn, vehicle_id, limit=2, offset=2)
+
+        assert total == 3
+        assert len(first_page) == 2
+        assert len(second_page) == 1
+
+    async def test_get_detail_and_get_raw_payload(self, db: Database) -> None:
+        account_id = await _seed_account(db)
+        vehicle_id = await _seed_vehicle(db, account_id)
+        requests = DataRequestRepository()
+        repo = DeliveryRepository()
+        async with db.write() as conn:
+            request_id = await requests.upsert(
+                conn, vehicle_id=vehicle_id, kind="partial", remote_id="r", interval_s=900
+            )
+            delivery_id = await repo.add(
+                conn,
+                data_request_id=request_id,
+                import_batch_id=None,
+                remote_name="f.zip",
+                delivered_at=_NOW,
+                fetched_at=_NOW,
+                has_content=True,
+                sha256="a" * 64,
+                size_bytes=1,
+                parse_state="parsed",
+                parser_version="v1",
+                raw_payload=b"payload",
+            )
+
+        async with db.read() as conn:
+            detail = await repo.get_detail(conn, delivery_id)
+            assert detail is not None
+            assert detail.vehicle_id == vehicle_id
+            assert detail.kind == "partial"
+            assert detail.source == "portal"
+            assert detail.raw_available is True
+
+            payload = await repo.get_raw_payload(conn, delivery_id)
+            assert payload == b"payload"
+
+            assert await repo.get_detail(conn, uuid4()) is None
+            assert await repo.get_raw_payload(conn, uuid4()) is None
+
 
 class TestDataPointRepository:
     async def _delivery(self, db: Database) -> tuple[UUID, UUID]:
@@ -726,6 +879,63 @@ class TestDataPointRepository:
 
         assert result.new == 100_000
         assert elapsed < 20.0
+
+    async def test_first_seen_by_dedup_keys_resolves_known_and_omits_unknown(
+        self, db: Database
+    ) -> None:
+        vehicle_id, delivery_id = await self._delivery(db)
+        repo = DataPointRepository()
+        point = DataPoint(
+            key="k1",
+            field_name="mileage",
+            value_raw="100",
+            captured_at=_NOW,
+            captured_at_quality=TimestampQuality.EXACT,
+        )
+        known_key = compute_dedup_key(
+            point.key, point.field_name, point.captured_at, point.value_raw
+        )
+        async with db.write() as conn:
+            await repo.upsert_many(
+                conn, vehicle_id=vehicle_id, delivery_id=delivery_id, points=[point], seen_at=_NOW
+            )
+
+        unknown_key = compute_dedup_key("nope", "nope", None, None)
+        async with db.read() as conn:
+            resolved = await repo.first_seen_by_dedup_keys(
+                conn, vehicle_id, [known_key, unknown_key]
+            )
+
+        assert resolved[known_key] == (delivery_id, _NOW)
+        assert unknown_key not in resolved
+
+    async def test_list_first_seen_in_delivery_paginates_by_field_name(self, db: Database) -> None:
+        vehicle_id, delivery_id = await self._delivery(db)
+        repo = DataPointRepository()
+        points = [
+            DataPoint(
+                key=f"k{i}",
+                field_name=f"f{i}",
+                value_raw=str(i),
+                captured_at=_NOW,
+                captured_at_quality=TimestampQuality.EXACT,
+            )
+            for i in range(3)
+        ]
+        async with db.write() as conn:
+            await repo.upsert_many(
+                conn, vehicle_id=vehicle_id, delivery_id=delivery_id, points=points, seen_at=_NOW
+            )
+
+        async with db.read() as conn:
+            page, total = await repo.list_first_seen_in_delivery(
+                conn, delivery_id, limit=2, offset=0
+            )
+            rest, _ = await repo.list_first_seen_in_delivery(conn, delivery_id, limit=2, offset=2)
+
+        assert total == 3
+        assert [record.field_name for record in page] == ["f0", "f1"]
+        assert [record.field_name for record in rest] == ["f2"]
 
 
 class TestCollectorRunRepository:

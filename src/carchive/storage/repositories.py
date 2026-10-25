@@ -14,6 +14,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import (
     ColumnElement,
+    CompoundSelect,
     Row,
     bindparam,
     case,
@@ -21,8 +22,10 @@ from sqlalchemy import (
     exists,
     func,
     insert,
+    literal,
     or_,
     select,
+    union_all,
     update,
 )
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -42,8 +45,11 @@ from carchive.storage.records import (
     DataRequestRecord,
     DeliveryActivitySummary,
     DeliveryContentRecord,
+    DeliveryDetailRecord,
+    DeliverySummaryRecord,
     FieldSummaryRecord,
     FieldValueRecord,
+    FirstSeenPointRecord,
     PendingDeliveryRecord,
     SignalValueRecord,
     UpsertResult,
@@ -875,6 +881,206 @@ class DeliveryRepository:
             placeholders_since_content=placeholders_since_content,
         )
 
+    def _delivery_rows(
+        self, *, vehicle_id: UUID | None = None, delivery_id: UUID | None = None
+    ) -> CompoundSelect[Any]:
+        """Build the `UNION ALL` of a vehicle's/delivery's rows, reachable via either parent.
+
+        Exactly one `deliveries` row's `data_request_id`/`import_batch_id` is ever set (the
+        schema's `exactly_one_parent` check), so the two branches never produce the same row
+        twice.
+
+        Args:
+            vehicle_id: restrict to deliveries belonging to this vehicle, via either parent.
+            delivery_id: restrict to the one delivery with this id, via either parent.
+
+        Returns:
+            A `UNION ALL` selecting `id`, `vehicle_id`, `kind`, `source`, `remote_name`,
+            `delivered_at`, `fetched_at`, `has_content`, `size_bytes`, `parse_state` and
+            `raw_available`.
+        """
+        portal = select(
+            deliveries.c.id,
+            data_requests.c.vehicle_id,
+            data_requests.c.kind,
+            literal("portal").label("source"),
+            deliveries.c.remote_name,
+            deliveries.c.delivered_at,
+            deliveries.c.fetched_at,
+            deliveries.c.has_content,
+            deliveries.c.size_bytes,
+            deliveries.c.parse_state,
+            deliveries.c.raw_payload.is_not(None).label("raw_available"),
+        ).select_from(
+            deliveries.join(data_requests, deliveries.c.data_request_id == data_requests.c.id)
+        )
+        imported = select(
+            deliveries.c.id,
+            import_batches.c.vehicle_id,
+            import_batches.c.kind,
+            literal("import").label("source"),
+            deliveries.c.remote_name,
+            deliveries.c.delivered_at,
+            deliveries.c.fetched_at,
+            deliveries.c.has_content,
+            deliveries.c.size_bytes,
+            deliveries.c.parse_state,
+            deliveries.c.raw_payload.is_not(None).label("raw_available"),
+        ).select_from(
+            deliveries.join(import_batches, deliveries.c.import_batch_id == import_batches.c.id)
+        )
+        if vehicle_id is not None:
+            portal = portal.where(data_requests.c.vehicle_id == vehicle_id)
+            imported = imported.where(import_batches.c.vehicle_id == vehicle_id)
+        if delivery_id is not None:
+            portal = portal.where(deliveries.c.id == delivery_id)
+            imported = imported.where(deliveries.c.id == delivery_id)
+        return union_all(portal, imported)
+
+    async def list_for_vehicle(
+        self, conn: AsyncConnection, vehicle_id: UUID, *, limit: int, offset: int
+    ) -> tuple[list[DeliverySummaryRecord], int]:
+        """List `vehicle_id`'s deliveries, newest-delivered first, with new-value activity.
+
+        Deliveries with an unknown `delivered_at` (never confirmed by the portal) sort after
+        every delivery with a known one, newest `fetched_at` breaking ties. New-value activity
+        is computed with one grouped aggregate over `data_points`, outer-joined onto the
+        delivery rows, never with one query per delivery.
+
+        Args:
+            conn: the connection to read through.
+            vehicle_id: the vehicle to list deliveries for.
+            limit: the maximum number of deliveries to return.
+            offset: how many matching deliveries to skip, for paging.
+
+        Returns:
+            The page of deliveries and the total number of deliveries for `vehicle_id`.
+        """
+        base = self._delivery_rows(vehicle_id=vehicle_id).subquery()
+        total = (await conn.execute(select(func.count()).select_from(base))).scalar_one()
+
+        valid_captured_at = case(
+            (data_points.c.captured_at_quality != "invalid", data_points.c.captured_at),
+            else_=None,
+        )
+        new_counts = (
+            select(
+                data_points.c.first_delivery_id,
+                func.count().label("new_point_count"),
+                func.min(valid_captured_at).label("new_captured_min"),
+                func.max(valid_captured_at).label("new_captured_max"),
+            )
+            .where(data_points.c.vehicle_id == vehicle_id)
+            .group_by(data_points.c.first_delivery_id)
+            .subquery()
+        )
+        rows = (
+            await conn.execute(
+                select(
+                    base.c.id,
+                    base.c.kind,
+                    base.c.source,
+                    base.c.remote_name,
+                    base.c.delivered_at,
+                    base.c.fetched_at,
+                    base.c.has_content,
+                    base.c.size_bytes,
+                    base.c.parse_state,
+                    base.c.raw_available,
+                    func.coalesce(new_counts.c.new_point_count, 0).label("new_point_count"),
+                    new_counts.c.new_captured_min,
+                    new_counts.c.new_captured_max,
+                )
+                .select_from(
+                    base.outerjoin(new_counts, base.c.id == new_counts.c.first_delivery_id)
+                )
+                .order_by(
+                    base.c.delivered_at.is_(None),
+                    base.c.delivered_at.desc(),
+                    base.c.fetched_at.desc(),
+                )
+                .limit(limit)
+                .offset(offset)
+            )
+        ).all()
+        return [self._summary_record(row) for row in rows], total
+
+    def _summary_record(self, row: Any) -> DeliverySummaryRecord:
+        return DeliverySummaryRecord(
+            id=row.id,
+            kind=row.kind,
+            source=row.source,
+            remote_name=row.remote_name,
+            delivered_at=row.delivered_at,
+            fetched_at=row.fetched_at,
+            has_content=row.has_content,
+            size_bytes=row.size_bytes,
+            parse_state=row.parse_state,
+            raw_available=row.raw_available,
+            new_point_count=row.new_point_count,
+            new_captured_min=row.new_captured_min,
+            new_captured_max=row.new_captured_max,
+        )
+
+    async def get_detail(
+        self, conn: AsyncConnection, delivery_id: UUID
+    ) -> DeliveryDetailRecord | None:
+        """Return one delivery's metadata, for the delivery detail page.
+
+        Args:
+            conn: the connection to read through.
+            delivery_id: the delivery to look up.
+
+        Returns:
+            The delivery's detail record, or `None` if no such delivery exists.
+        """
+        row = (await conn.execute(self._delivery_rows(delivery_id=delivery_id))).first()
+        if row is None:
+            return None
+        valid_captured_at = case(
+            (data_points.c.captured_at_quality != "invalid", data_points.c.captured_at),
+            else_=None,
+        )
+        counts = (
+            await conn.execute(
+                select(
+                    func.count(),
+                    func.min(valid_captured_at),
+                    func.max(valid_captured_at),
+                ).where(data_points.c.first_delivery_id == delivery_id)
+            )
+        ).one()
+        return DeliveryDetailRecord(
+            id=row.id,
+            kind=row.kind,
+            source=row.source,
+            remote_name=row.remote_name,
+            delivered_at=row.delivered_at,
+            fetched_at=row.fetched_at,
+            has_content=row.has_content,
+            size_bytes=row.size_bytes,
+            parse_state=row.parse_state,
+            raw_available=row.raw_available,
+            new_point_count=counts[0],
+            new_captured_min=counts[1],
+            new_captured_max=counts[2],
+            vehicle_id=row.vehicle_id,
+        )
+
+    async def get_raw_payload(self, conn: AsyncConnection, delivery_id: UUID) -> bytes | None:
+        """Return `delivery_id`'s raw payload, or `None` if purged, a placeholder, or unknown.
+
+        Never returns anything but the payload itself: the caller that needs to tell "purged"
+        apart from "unknown delivery id" already has the delivery's `raw_available` flag from
+        `get_detail`.
+        """
+        row = (
+            await conn.execute(
+                select(deliveries.c.raw_payload).where(deliveries.c.id == delivery_id)
+            )
+        ).first()
+        return row.raw_payload if row is not None else None
+
 
 class ImportBatchRepository:
     """Reads and writes `import_batches`."""
@@ -1178,6 +1384,94 @@ class DataPointRepository:
             )
             for row in rows
         ]
+
+    async def first_seen_by_dedup_keys(
+        self, conn: AsyncConnection, vehicle_id: UUID, keys: Sequence[str]
+    ) -> dict[str, tuple[UUID, datetime]]:
+        """Resolve where each of `keys` was first stored for `vehicle_id`.
+
+        Used to classify a freshly re-parsed delivery's values as new (this delivery is the
+        first source) or already known (some earlier delivery was), without a query per value.
+
+        Args:
+            conn: the connection to read through.
+            vehicle_id: the vehicle the dedup keys belong to.
+            keys: the `storage.dedup.dedup_key` values to resolve.
+
+        Returns:
+            A mapping from dedup key to `(first_delivery_id, first_seen_at)`; a key never
+            stored for this vehicle is simply absent.
+        """
+        result: dict[str, tuple[UUID, datetime]] = {}
+        for chunk in _chunks(list(dict.fromkeys(keys))):
+            rows = (
+                await conn.execute(
+                    select(
+                        data_points.c.dedup_key,
+                        data_points.c.first_delivery_id,
+                        data_points.c.first_seen_at,
+                    ).where(
+                        data_points.c.vehicle_id == vehicle_id,
+                        data_points.c.dedup_key.in_(chunk),
+                    )
+                )
+            ).all()
+            for row in rows:
+                result[row.dedup_key] = (row.first_delivery_id, row.first_seen_at)
+        return result
+
+    async def list_first_seen_in_delivery(
+        self, conn: AsyncConnection, delivery_id: UUID, *, limit: int, offset: int
+    ) -> tuple[list[FirstSeenPointRecord], int]:
+        """List the data points this delivery was the first to report, by field name.
+
+        Used only when the delivery's `raw_payload` is unavailable (purged, or never stored
+        for a placeholder) and the values it merely repeated can no longer be told apart from
+        values it introduced, since both would need a re-parse of the original bytes.
+
+        Args:
+            conn: the connection to read through.
+            delivery_id: the delivery to list first-seen points for.
+            limit: the maximum number of points to return.
+            offset: how many matching points to skip, for paging.
+
+        Returns:
+            The page of points and the total number of points this delivery first reported.
+        """
+        total = (
+            await conn.execute(
+                select(func.count())
+                .select_from(data_points)
+                .where(data_points.c.first_delivery_id == delivery_id)
+            )
+        ).scalar_one()
+        rows = (
+            await conn.execute(
+                select(
+                    data_points.c.key,
+                    data_points.c.field_name,
+                    data_points.c.value_raw,
+                    data_points.c.captured_at,
+                    data_points.c.captured_at_quality,
+                    data_points.c.first_seen_at,
+                )
+                .where(data_points.c.first_delivery_id == delivery_id)
+                .order_by(data_points.c.field_name)
+                .limit(limit)
+                .offset(offset)
+            )
+        ).all()
+        return [
+            FirstSeenPointRecord(
+                key=row.key,
+                field_name=row.field_name,
+                value_raw=row.value_raw,
+                captured_at=row.captured_at,
+                captured_at_quality=row.captured_at_quality,
+                first_seen_at=row.first_seen_at,
+            )
+            for row in rows
+        ], total
 
 
 def _rank_order() -> tuple[ColumnElement[Any], ...]:
