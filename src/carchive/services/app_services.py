@@ -17,6 +17,7 @@ from carchive.core.redact import redact
 from carchive.services.accounts import AccountService
 from carchive.services.catalog import CatalogService
 from carchive.services.dashboard import DashboardService
+from carchive.services.deliveries import DeliveryBrowser
 from carchive.services.explorer import ExplorerService
 from carchive.services.operator_auth import LoginThrottle, OperatorAuth
 from carchive.storage.db import Database
@@ -67,6 +68,7 @@ class AppServices:
         )
         self.catalog = CatalogService(db)
         self.explorer = ExplorerService(db, self.catalog, accounts.registry)
+        self.deliveries = DeliveryBrowser(db, accounts.registry)
         self._scheduler_running = False
         self._vehicles = VehicleRepository()
 
