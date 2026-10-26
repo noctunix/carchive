@@ -780,3 +780,6 @@ msgstr "diese Lieferung anzeigen"
 
 msgid "No values match this filter."
 msgstr "Keine Werte entsprechen diesem Filter."
+
+msgid "Values per page"
+msgstr "Werte pro Seite"

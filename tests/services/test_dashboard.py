@@ -796,3 +796,43 @@ async def test_vehicle_detail_caps_collector_history_at_twenty_runs(
 
     assert detail is not None
     assert len(detail.collector_runs) == 20
+
+
+async def test_vehicle_detail_paginates_signal_values(db: Database, settings: Settings) -> None:
+    account_id = await _seed_account(db)
+    vehicle_id = await _seed_vehicle(db, account_id)
+    request_id = await _seed_request(db, vehicle_id)
+    delivery_id = await _seed_delivery(db, request_id, remote_name="d1.zip", fetched_at=_NOW)
+    for i in range(30):
+        await _seed_signal(
+            db,
+            vehicle_id,
+            delivery_id,
+            signal="vehicle.odometer",
+            source_field="mileage",
+            value=float(i),
+            captured_at=_NOW - timedelta(hours=i),
+        )
+
+    service = _service(db, settings)
+    first_page = await service.vehicle_detail(vehicle_id, signals_page_size=25)
+    second_page = await service.vehicle_detail(vehicle_id, signals_page=2, signals_page_size=25)
+
+    assert first_page is not None
+    assert second_page is not None
+    assert first_page.signals_total == 30
+    assert first_page.signals_page_size == 25
+    assert first_page.signals_total_pages == 2
+    assert sum(len(v) for v in first_page.signals.values()) == 25
+    assert second_page.signals_page == 2
+    assert sum(len(v) for v in second_page.signals.values()) == 5
+
+
+async def test_vehicle_detail_rejects_unknown_page_size(db: Database, settings: Settings) -> None:
+    account_id = await _seed_account(db)
+    vehicle_id = await _seed_vehicle(db, account_id)
+
+    detail = await _service(db, settings).vehicle_detail(vehicle_id, signals_page_size=9999)
+
+    assert detail is not None
+    assert detail.signals_page_size == 50

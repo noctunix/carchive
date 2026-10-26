@@ -16,23 +16,39 @@ from starlette.responses import Response
 
 from carchive.services.accounts import DeletionResult, VehicleNotFoundError
 from carchive.services.app_services import AppServices
+from carchive.services.dashboard import SIGNAL_PAGE_SIZES
 
 router = APIRouter()
 
 
 @router.get("/vehicles/{vehicle_id}")
-async def vehicle_detail(request: Request, vehicle_id: UUID) -> Response:
+async def vehicle_detail(
+    request: Request, vehicle_id: UUID, signals_page: int = 1, signals_page_size: int = 0
+) -> Response:
     """Show one vehicle's signals, data requests, collector history and monitoring notices.
+
+    Args:
+        request: the incoming request.
+        vehicle_id: the vehicle to show.
+        signals_page: the 1-based page of signal values to show.
+        signals_page_size: how many signal values a page holds; any value not in
+            `SIGNAL_PAGE_SIZES` falls back to the default.
 
     Raises:
         HTTPException: 404 if no vehicle with `vehicle_id` exists.
     """
     services: AppServices = request.app.state.services
     templates: Jinja2Templates = request.app.state.templates
-    detail = await services.dashboard.vehicle_detail(vehicle_id)
+    detail = await services.dashboard.vehicle_detail(
+        vehicle_id, signals_page=max(signals_page, 1), signals_page_size=signals_page_size
+    )
     if detail is None:
         raise HTTPException(status_code=404)
-    context = {"detail": detail, "vehicle_count": await services.vehicle_count()}
+    context = {
+        "detail": detail,
+        "signal_page_sizes": SIGNAL_PAGE_SIZES,
+        "vehicle_count": await services.vehicle_count(),
+    }
     return templates.TemplateResponse(request, "vehicle_detail.html", context)
 
 

@@ -14,6 +14,18 @@
 {% endif %}
 
 <h2>{{ _("Signals") }}</h2>
+{% if detail.signals_total %}
+<form method="get" action="/vehicles/{{ detail.id }}">
+  <label for="signals_page_size">{{ _("Values per page") }}</label>
+  <select id="signals_page_size" name="signals_page_size" onchange="this.form.submit()">
+    {% for size in signal_page_sizes %}
+    <option value="{{ size }}" {% if size == detail.signals_page_size %}selected{% endif %}>{{ size }}</option>
+    {% endfor %}
+  </select>
+  <input type="hidden" name="signals_page" value="1">
+  <noscript><button type="submit">{{ _("Apply") }}</button></noscript>
+</form>
+{% endif %}
 {% if detail.signals %}
 {% for signal, fields in detail.signals.items() %}
 <h3>{{ signal|signal_label }} <span class="raw-signal">{{ signal }}</span></h3>
@@ -41,6 +53,13 @@
   {% endfor %}
 </table>
 {% endfor %}
+{% if detail.signals_total_pages > 1 %}
+<p class="muted">
+  {{ _("Page %(page)s of %(total)s", page=detail.signals_page, total=detail.signals_total_pages) }}
+  {% if detail.signals_page > 1 %}<a href="/vehicles/{{ detail.id }}?signals_page={{ detail.signals_page - 1 }}&signals_page_size={{ detail.signals_page_size }}">{{ _("Previous") }}</a>{% endif %}
+  {% if detail.signals_page < detail.signals_total_pages %}<a href="/vehicles/{{ detail.id }}?signals_page={{ detail.signals_page + 1 }}&signals_page_size={{ detail.signals_page_size }}">{{ _("Next") }}</a>{% endif %}
+</p>
+{% endif %}
 {% else %}
 <p>{{ _("No signal values yet.") }}</p>
 {% endif %}

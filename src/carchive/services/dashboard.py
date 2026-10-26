@@ -65,6 +65,12 @@ _RECENT_RUNS_FOR_NOTICES = 10
 _RECENT_RUNS_FOR_DETAIL = 20
 BACKUP_WARNING_AGE = timedelta(hours=36)
 
+# The signals section of the vehicle detail page can grow without bound (one row per
+# source field per distinct `captured_at`), so it is paginated like the deliveries list;
+# unlike that list, the page size is user-selectable from this fixed set of options.
+SIGNAL_PAGE_SIZES: tuple[int, ...] = (25, 50, 100, 200)
+_SIGNAL_PAGE_SIZE_DEFAULT = SIGNAL_PAGE_SIZES[1]
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
@@ -202,6 +208,10 @@ class VehicleDetail:
     label: str
     brand: str
     signals: Mapping[str, tuple[SourceFieldValue, ...]]
+    signals_total: int
+    signals_page: int
+    signals_total_pages: int
+    signals_page_size: int
     data_requests: tuple[DataRequestInfo, ...]
     collector_runs: tuple[CollectorRunInfo, ...]
     notices: tuple[Notice, ...]
@@ -316,8 +326,23 @@ class DashboardService:
             accounts_needing_attention=tuple(attention_labels),
         )
 
-    async def vehicle_detail(self, vehicle_id: UUID) -> VehicleDetail | None:
-        """Build the detail page for `vehicle_id`, or return `None` if it does not exist."""
+    async def vehicle_detail(
+        self, vehicle_id: UUID, *, signals_page: int = 1, signals_page_size: int | None = None
+    ) -> VehicleDetail | None:
+        """Build the detail page for `vehicle_id`, or return `None` if it does not exist.
+
+        Args:
+            vehicle_id: the vehicle to show.
+            signals_page: the 1-based page of the (flattened, signal-ordered) signal
+                values to show.
+            signals_page_size: how many signal values a page holds; must be one of
+                `SIGNAL_PAGE_SIZES`, else the default is used.
+        """
+        page_size = (
+            signals_page_size
+            if signals_page_size in SIGNAL_PAGE_SIZES
+            else _SIGNAL_PAGE_SIZE_DEFAULT
+        )
         async with self._db.read() as conn:
             vehicle = await self._vehicles.get(conn, vehicle_id)
             if vehicle is None:
@@ -336,22 +361,32 @@ class DashboardService:
             )
 
         kind_by_request_id = {request.id: request.kind for request in requests}
-        signals = {
-            signal: tuple(
-                _to_source_field_value(record)
-                for record in sorted(
-                    grouped[signal],
-                    key=lambda r: r.captured_at or datetime.min.replace(tzinfo=UTC),
-                    reverse=True,
-                )
-            )
+        flattened: list[tuple[str, SourceFieldValue]] = [
+            (signal, _to_source_field_value(record))
             for signal in _ordered_signal_names(list(grouped))
-        }
+            for record in sorted(
+                grouped[signal],
+                key=lambda r: r.captured_at or datetime.min.replace(tzinfo=UTC),
+                reverse=True,
+            )
+        ]
+        signals_total = len(flattened)
+        signals_total_pages = max(1, (signals_total + page_size - 1) // page_size)
+        signals_page = min(max(signals_page, 1), signals_total_pages)
+        offset = (signals_page - 1) * page_size
+        signals: dict[str, tuple[SourceFieldValue, ...]] = {}
+        for signal, value in flattened[offset : offset + page_size]:
+            signals.setdefault(signal, ())
+            signals[signal] = (*signals[signal], value)
         return VehicleDetail(
             id=vehicle.id,
             label=vehicle.label,
             brand=vehicle.brand,
             signals=signals,
+            signals_total=signals_total,
+            signals_page=signals_page,
+            signals_total_pages=signals_total_pages,
+            signals_page_size=page_size,
             data_requests=tuple(
                 DataRequestInfo(
                     kind=r.kind,
