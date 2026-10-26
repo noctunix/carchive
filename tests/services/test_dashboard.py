@@ -774,9 +774,10 @@ async def test_vehicle_detail_includes_source_fields_and_data_requests(
     detail = await _service(db, settings).vehicle_detail(vehicle_id)
 
     assert detail is not None
-    assert detail.signals["vehicle.odometer"][0].source_field == "mileage"
-    assert detail.signals["vehicle.odometer"][0].value == 1234.0
-    assert detail.signals["vehicle.odometer"][0].kind == SignalKind.NUMERIC
+    group = detail.signals["vehicle.odometer"][0]
+    assert group.source_field == "mileage"
+    assert group.latest.value == 1234.0
+    assert group.latest.kind == SignalKind.NUMERIC
     assert len(detail.data_requests) == 1
     assert detail.data_requests[0].kind == "partial"
 
@@ -798,7 +799,9 @@ async def test_vehicle_detail_caps_collector_history_at_twenty_runs(
     assert len(detail.collector_runs) == 20
 
 
-async def test_vehicle_detail_paginates_signal_values(db: Database, settings: Settings) -> None:
+async def test_vehicle_detail_groups_signal_values_by_source_field_and_caps_history(
+    db: Database, settings: Settings
+) -> None:
     account_id = await _seed_account(db)
     vehicle_id = await _seed_vehicle(db, account_id)
     request_id = await _seed_request(db, vehicle_id)
@@ -814,25 +817,92 @@ async def test_vehicle_detail_paginates_signal_values(db: Database, settings: Se
             captured_at=_NOW - timedelta(hours=i),
         )
 
-    service = _service(db, settings)
-    first_page = await service.vehicle_detail(vehicle_id, signals_page_size=25)
-    second_page = await service.vehicle_detail(vehicle_id, signals_page=2, signals_page_size=25)
-
-    assert first_page is not None
-    assert second_page is not None
-    assert first_page.signals_total == 30
-    assert first_page.signals_page_size == 25
-    assert first_page.signals_total_pages == 2
-    assert sum(len(v) for v in first_page.signals.values()) == 25
-    assert second_page.signals_page == 2
-    assert sum(len(v) for v in second_page.signals.values()) == 5
-
-
-async def test_vehicle_detail_rejects_unknown_page_size(db: Database, settings: Settings) -> None:
-    account_id = await _seed_account(db)
-    vehicle_id = await _seed_vehicle(db, account_id)
-
-    detail = await _service(db, settings).vehicle_detail(vehicle_id, signals_page_size=9999)
+    detail = await _service(db, settings).vehicle_detail(vehicle_id)
 
     assert detail is not None
-    assert detail.signals_page_size == 50
+    (group,) = detail.signals["vehicle.odometer"]
+    assert group.source_field == "mileage"
+    assert group.latest.value == 0.0
+    assert group.history_total == 29
+    assert len(group.history) == 20
+    assert group.history_truncated is True
+
+
+async def test_vehicle_detail_signals_q_filters_by_signal_or_field_name(
+    db: Database, settings: Settings
+) -> None:
+    account_id = await _seed_account(db)
+    vehicle_id = await _seed_vehicle(db, account_id)
+    request_id = await _seed_request(db, vehicle_id)
+    delivery_id = await _seed_delivery(db, request_id, remote_name="d1.zip", fetched_at=_NOW)
+    await _seed_signal(
+        db,
+        vehicle_id,
+        delivery_id,
+        signal="vehicle.odometer",
+        source_field="mileage",
+        value=1234.0,
+        captured_at=_NOW,
+    )
+    await _seed_signal(
+        db,
+        vehicle_id,
+        delivery_id,
+        signal="battery.soc",
+        source_field="soc_pct",
+        value=80.0,
+        captured_at=_NOW,
+    )
+
+    service = _service(db, settings)
+    matched = await service.vehicle_detail(vehicle_id, signals_q="mileage")
+    unmatched = await service.vehicle_detail(vehicle_id, signals_q="nope")
+
+    assert matched is not None
+    assert set(matched.signals) == {"vehicle.odometer"}
+    assert unmatched is not None
+    assert unmatched.signals == {}
+
+
+async def test_vehicle_detail_flags_fields_only_ever_seen_via_all(
+    db: Database, settings: Settings
+) -> None:
+    account_id = await _seed_account(db)
+    vehicle_id = await _seed_vehicle(db, account_id)
+    all_request_id = await _seed_request(db, vehicle_id, kind="all")
+    all_delivery_id = await _seed_delivery(
+        db, all_request_id, remote_name="all.zip", fetched_at=_NOW
+    )
+    partial_request_id = await _seed_request(db, vehicle_id, kind="partial")
+    partial_delivery_id = await _seed_delivery(
+        db, partial_request_id, remote_name="partial.zip", fetched_at=_NOW
+    )
+    await _seed_signal(
+        db,
+        vehicle_id,
+        all_delivery_id,
+        signal="vehicle.odometer",
+        source_field="mileage",
+        value=1234.0,
+        captured_at=_NOW,
+    )
+    await _seed_signal(
+        db,
+        vehicle_id,
+        partial_delivery_id,
+        signal="battery.soc",
+        source_field="soc_pct",
+        value=80.0,
+        captured_at=_NOW,
+    )
+
+    detail = await _service(db, settings).vehicle_detail(vehicle_id)
+
+    assert detail is not None
+    (odometer_group,) = detail.signals["vehicle.odometer"]
+    assert odometer_group.all_only is True
+    assert odometer_group.ever_via_partial is False
+    (soc_group,) = detail.signals["battery.soc"]
+    assert soc_group.all_only is False
+    assert soc_group.ever_via_partial is True
+    assert any(n.kind == "fields_all_only" for n in detail.notices)

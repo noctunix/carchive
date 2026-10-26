@@ -241,6 +241,9 @@ msgstr "Selbst der neueste je gemeldete Wert dieses Fahrzeugs (%(signal)s) ist %
 msgid "The portal failed on the last %(count)s runs in a row."
 msgstr "Das Portal ist bei den letzten %(count)s Läufen in Folge fehlgeschlagen."
 
+msgid "%(count)s field(s) have only ever arrived via the one-off 'all' request, never via the recurring 'partial' poll: %(fields)s"
+msgstr "%(count)s Feld(er) kamen bisher ausschließlich über die einmalige 'all'-Anfrage, nie über die wiederkehrende 'partial'-Abfrage: %(fields)s"
+
 msgid "Last verified backup:"
 msgstr "Letztes geprüftes Backup:"
 
@@ -781,5 +784,26 @@ msgstr "diese Lieferung anzeigen"
 msgid "No values match this filter."
 msgstr "Keine Werte entsprechen diesem Filter."
 
-msgid "Values per page"
-msgstr "Werte pro Seite"
+msgid "Filter"
+msgstr "Filter"
+
+msgid "e.g. battery.soc or mileage"
+msgstr "z. B. battery.soc oder mileage"
+
+msgid "%(count)s earlier"
+msgstr "%(count)s ältere"
+
+msgid "Showing the newest %(shown)s of %(total)s earlier values."
+msgstr "Zeigt die neuesten %(shown)s von %(total)s älteren Werten."
+
+msgid "No signals match this filter."
+msgstr "Keine Signale entsprechen diesem Filter."
+
+msgid "all only"
+msgstr "nur 'all'"
+
+msgid "Never seen through a partial request."
+msgstr "Noch nie über eine partial-Anfrage gesehen."
+
+msgid "Show run details"
+msgstr "Lauf-Details anzeigen"

@@ -167,6 +167,7 @@ def _signal_value_record(row: Row[Any]) -> SignalValueRecord:
         mapping_version=row.mapping_version,
         source_field=row.source_field,
         first_seen_at=row.first_seen_at,
+        source_request_kind=row.source_request_kind,
     )
 
 
@@ -1573,7 +1574,10 @@ class SignalValueRepository:
 
         Returns every source field's value, not just one "best" value per signal: picking
         the one to display is `core.signals.preferred`'s job, done at read time against a
-        mapper's preference order, not baked into storage.
+        mapper's preference order, not baked into storage. Each value also carries the
+        `data_requests.kind` of the delivery that first reported it, so callers can tell
+        which values ever arrived through a `"partial"` request versus only through the
+        one-off `"all"` dump.
 
         Args:
             conn: the connection to read through.
@@ -1588,9 +1592,12 @@ class SignalValueRepository:
                     signal_values,
                     data_points.c.field_name.label("source_field"),
                     data_points.c.first_seen_at.label("first_seen_at"),
+                    data_requests.c.kind.label("source_request_kind"),
                 )
                 .select_from(signal_values)
                 .join(data_points, signal_values.c.source_data_point_id == data_points.c.id)
+                .join(deliveries, data_points.c.first_delivery_id == deliveries.c.id)
+                .outerjoin(data_requests, deliveries.c.data_request_id == data_requests.c.id)
                 .where(signal_values.c.vehicle_id == vehicle_id)
             )
         ).all()

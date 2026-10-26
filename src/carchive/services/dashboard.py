@@ -65,11 +65,18 @@ _RECENT_RUNS_FOR_NOTICES = 10
 _RECENT_RUNS_FOR_DETAIL = 20
 BACKUP_WARNING_AGE = timedelta(hours=36)
 
-# The signals section of the vehicle detail page can grow without bound (one row per
-# source field per distinct `captured_at`), so it is paginated like the deliveries list;
-# unlike that list, the page size is user-selectable from this fixed set of options.
-SIGNAL_PAGE_SIZES: tuple[int, ...] = (25, 50, 100, 200)
-_SIGNAL_PAGE_SIZE_DEFAULT = SIGNAL_PAGE_SIZES[1]
+# The signals section of the vehicle detail page groups by (signal, source field) and
+# shows only the latest value per group; older values are capped at this many entries
+# rather than rendered in full, so a long-lived vehicle's history stays bounded even with
+# every group expanded at once.
+_SIGNAL_HISTORY_CAP = 20
+_MAX_SIGNAL_QUERY_LEN = 200
+
+# The portal's "all" dataset kind is a one-off full dump, requested at most once per
+# vehicle; "partial" is the only kind that recurs. A field the recurring poll has never
+# actually delivered (seen only via "all") is flagged on the signals section, since it is
+# otherwise invisible that ongoing polling does not actually cover it.
+_RECURRING_REQUEST_KIND = "partial"
 
 
 def _utcnow() -> datetime:
@@ -156,7 +163,13 @@ class DashboardView:
 
 @dataclass(frozen=True, slots=True)
 class SourceFieldValue:
-    """One source field's contribution to a canonical signal, for the vehicle detail page."""
+    """One source field's contribution to a canonical signal, for the vehicle detail page.
+
+    Attributes:
+        request_kind: the `data_requests.kind` of the request whose delivery first
+            reported this value (`"partial"` or `"all"`), or `None` if it came from an
+            import batch instead.
+    """
 
     source_field: str
     value: float | str | bool | None
@@ -165,6 +178,31 @@ class SourceFieldValue:
     captured_at: datetime | None
     captured_at_quality: TimestampQuality
     first_seen_at: datetime
+    request_kind: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class SignalFieldGroup:
+    """One source field's values for a signal, on the vehicle detail page.
+
+    Attributes:
+        latest: the most recent value, always shown.
+        history: older values, newest first, capped at `_SIGNAL_HISTORY_CAP`.
+        history_total: how many older values exist, before capping.
+        history_truncated: `True` if `history` leaves out some of `history_total`.
+        ever_via_partial: `True` if any of this field's values (latest or history, not
+            just the capped slice) ever arrived through a `"partial"` request.
+        all_only: `True` if every value arrived through an `"all"` request and none
+            through `"partial"` — a field the recurring poll has never actually delivered.
+    """
+
+    source_field: str
+    latest: SourceFieldValue
+    history: tuple[SourceFieldValue, ...]
+    history_total: int
+    history_truncated: bool
+    ever_via_partial: bool
+    all_only: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -207,11 +245,7 @@ class VehicleDetail:
     id: UUID
     label: str
     brand: str
-    signals: Mapping[str, tuple[SourceFieldValue, ...]]
-    signals_total: int
-    signals_page: int
-    signals_total_pages: int
-    signals_page_size: int
+    signals: Mapping[str, tuple[SignalFieldGroup, ...]]
     data_requests: tuple[DataRequestInfo, ...]
     collector_runs: tuple[CollectorRunInfo, ...]
     notices: tuple[Notice, ...]
@@ -222,6 +256,28 @@ def _ordered_signal_names(names: Sequence[str]) -> list[str]:
     rank = {name: index for index, name in enumerate(DASHBOARD_SIGNAL_ORDER)}
     unranked = len(DASHBOARD_SIGNAL_ORDER)
     return sorted(names, key=lambda name: (rank.get(name, unranked), name))
+
+
+def _filter_signal_groups(
+    signals: Mapping[str, tuple[SignalFieldGroup, ...]], query: str
+) -> dict[str, tuple[SignalFieldGroup, ...]]:
+    """Keep only the groups whose signal or source field name matches `query`.
+
+    A signal with no matching field, or an empty `query`, keeps all its fields; a signal
+    with no fields left after filtering is dropped entirely.
+    """
+    needle = query.lower()
+    if not needle:
+        return {signal: groups for signal, groups in signals.items() if groups}
+    filtered: dict[str, tuple[SignalFieldGroup, ...]] = {}
+    for signal, groups in signals.items():
+        if needle in signal.lower():
+            kept = groups
+        else:
+            kept = tuple(g for g in groups if needle in g.source_field.lower())
+        if kept:
+            filtered[signal] = kept
+    return filtered
 
 
 def _to_signal_value(record: SignalValueRecord) -> SignalValue:
@@ -254,6 +310,7 @@ def _to_source_field_value(record: SignalValueRecord) -> SourceFieldValue:
         captured_at=value.captured_at,
         captured_at_quality=TimestampQuality(record.captured_at_quality),
         first_seen_at=record.first_seen_at,
+        request_kind=record.source_request_kind,
     )
 
 
@@ -327,22 +384,17 @@ class DashboardService:
         )
 
     async def vehicle_detail(
-        self, vehicle_id: UUID, *, signals_page: int = 1, signals_page_size: int | None = None
+        self, vehicle_id: UUID, *, signals_q: str = ""
     ) -> VehicleDetail | None:
         """Build the detail page for `vehicle_id`, or return `None` if it does not exist.
 
         Args:
             vehicle_id: the vehicle to show.
-            signals_page: the 1-based page of the (flattened, signal-ordered) signal
-                values to show.
-            signals_page_size: how many signal values a page holds; must be one of
-                `SIGNAL_PAGE_SIZES`, else the default is used.
+            signals_q: a case-insensitive substring filter over a signal's raw name or a
+                source field's name, capped at `_MAX_SIGNAL_QUERY_LEN` characters; an
+                empty string shows every signal.
         """
-        page_size = (
-            signals_page_size
-            if signals_page_size in SIGNAL_PAGE_SIZES
-            else _SIGNAL_PAGE_SIZE_DEFAULT
-        )
+        signals_q = signals_q.strip()[:_MAX_SIGNAL_QUERY_LEN]
         async with self._db.read() as conn:
             vehicle = await self._vehicles.get(conn, vehicle_id)
             if vehicle is None:
@@ -361,32 +413,28 @@ class DashboardService:
             )
 
         kind_by_request_id = {request.id: request.kind for request in requests}
-        flattened: list[tuple[str, SourceFieldValue]] = [
-            (signal, _to_source_field_value(record))
-            for signal in _ordered_signal_names(list(grouped))
-            for record in sorted(
-                grouped[signal],
-                key=lambda r: r.captured_at or datetime.min.replace(tzinfo=UTC),
-                reverse=True,
+        all_signals = self._grouped_signals(grouped)
+        all_only_fields = tuple(
+            f"{signal} ({group.source_field})"
+            for signal, groups in all_signals.items()
+            for group in groups
+            if group.all_only
+        )
+        if all_only_fields:
+            notices = (
+                *notices,
+                Notice(
+                    kind="fields_all_only",
+                    severity=Severity.WARNING,
+                    params={"count": len(all_only_fields), "fields": ", ".join(all_only_fields)},
+                ),
             )
-        ]
-        signals_total = len(flattened)
-        signals_total_pages = max(1, (signals_total + page_size - 1) // page_size)
-        signals_page = min(max(signals_page, 1), signals_total_pages)
-        offset = (signals_page - 1) * page_size
-        signals: dict[str, tuple[SourceFieldValue, ...]] = {}
-        for signal, value in flattened[offset : offset + page_size]:
-            signals.setdefault(signal, ())
-            signals[signal] = (*signals[signal], value)
+        signals = _filter_signal_groups(all_signals, signals_q)
         return VehicleDetail(
             id=vehicle.id,
             label=vehicle.label,
             brand=vehicle.brand,
             signals=signals,
-            signals_total=signals_total,
-            signals_page=signals_page,
-            signals_total_pages=signals_total_pages,
-            signals_page_size=page_size,
             data_requests=tuple(
                 DataRequestInfo(
                     kind=r.kind,
@@ -419,6 +467,46 @@ class DashboardService:
             ),
             notices=notices,
         )
+
+    def _grouped_signals(
+        self, grouped: Mapping[str, Sequence[SignalValueRecord]]
+    ) -> dict[str, tuple[SignalFieldGroup, ...]]:
+        """Group every one of `grouped`'s records by signal, then by source field.
+
+        Each field's newest value becomes `SignalFieldGroup.latest`, the rest its
+        (capped) `history`; unfiltered, so `all_only` reflects the field's whole history
+        rather than whatever a display filter happens to keep.
+        """
+        signals: dict[str, tuple[SignalFieldGroup, ...]] = {}
+        for signal in _ordered_signal_names(list(grouped)):
+            by_field: dict[str, list[SignalValueRecord]] = {}
+            for record in grouped[signal]:
+                by_field.setdefault(record.source_field, []).append(record)
+
+            groups: list[SignalFieldGroup] = []
+            for source_field in sorted(by_field):
+                records = sorted(
+                    by_field[source_field],
+                    key=lambda r: r.captured_at or datetime.min.replace(tzinfo=UTC),
+                    reverse=True,
+                )
+                values = [_to_source_field_value(r) for r in records]
+                older = values[1:]
+                ever_via_partial = any(v.request_kind == _RECURRING_REQUEST_KIND for v in values)
+                ever_via_any_kind = any(v.request_kind is not None for v in values)
+                groups.append(
+                    SignalFieldGroup(
+                        source_field=source_field,
+                        latest=values[0],
+                        history=tuple(older[:_SIGNAL_HISTORY_CAP]),
+                        history_total=len(older),
+                        history_truncated=len(older) > _SIGNAL_HISTORY_CAP,
+                        ever_via_partial=ever_via_partial,
+                        all_only=ever_via_any_kind and not ever_via_partial,
+                    )
+                )
+            signals[signal] = tuple(groups)
+        return signals
 
     async def _build_card(
         self, conn: AsyncConnection, vehicle: VehicleRecord, account: AccountRecord

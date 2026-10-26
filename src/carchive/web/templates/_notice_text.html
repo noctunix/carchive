@@ -19,6 +19,8 @@
 {{ _("Even the newest value this vehicle ever reported (%(signal)s) is %(age)s old.", signal=n.params.signal, age=n.params.newest_age_s|duration) }}
 {%- elif n.kind == "portal_unavailable" -%}
 {{ _("The portal failed on the last %(count)s runs in a row.", **n.params) }}
+{%- elif n.kind == "fields_all_only" -%}
+{{ _("%(count)s field(s) have only ever arrived via the one-off 'all' request, never via the recurring 'partial' poll: %(fields)s", **n.params) }}
 {%- else -%}
 {{ n.kind }}
 {%- endif -%}

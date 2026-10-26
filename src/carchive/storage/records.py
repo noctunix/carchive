@@ -129,6 +129,9 @@ class SignalValueRecord:
             derived from; needed by `core.signals.preferred` to break ties between several
             source fields reporting the same signal.
         first_seen_at: when the source data point was first stored locally.
+        source_request_kind: the `data_requests.kind` (`"partial"` or `"all"`) of the
+            request whose delivery first reported this value, or `None` if that delivery
+            came from an import batch instead (no data request, so no kind).
     """
 
     id: UUID
@@ -144,6 +147,7 @@ class SignalValueRecord:
     mapping_version: str
     source_field: str
     first_seen_at: datetime
+    source_request_kind: str | None
 
 
 @dataclass(frozen=True, slots=True)

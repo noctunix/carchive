@@ -13,56 +13,98 @@
 </ul>
 {% endif %}
 
-<h2>{{ _("Signals") }}</h2>
-{% if detail.signals_total %}
-<form method="get" action="/vehicles/{{ detail.id }}">
-  <label for="signals_page_size">{{ _("Values per page") }}</label>
-  <select id="signals_page_size" name="signals_page_size" onchange="this.form.submit()">
-    {% for size in signal_page_sizes %}
-    <option value="{{ size }}" {% if size == detail.signals_page_size %}selected{% endif %}>{{ size }}</option>
+<section>
+  <h2>{{ _("Signals") }}</h2>
+  <form
+    class="signal-filter"
+    action="/vehicles/{{ detail.id }}"
+    method="get"
+    hx-get="/vehicles/{{ detail.id }}"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-select="#signals-results"
+    hx-target="#signals-results"
+    hx-swap="outerHTML"
+    hx-push-url="true"
+  >
+    <label for="signals_q">{{ _("Filter") }}</label>
+    <input
+      type="search"
+      id="signals_q"
+      name="signals_q"
+      value="{{ signals_query }}"
+      placeholder="{{ _('e.g. battery.soc or mileage') }}"
+    >
+    <button type="submit">{{ _("Apply") }}</button>
+  </form>
+
+  <div id="signals-results">
+  {% if detail.signals %}
+  <div class="signal-groups">
+    {% for signal, fields in detail.signals.items() %}
+    <div class="signal-group">
+      <h3>{{ signal|signal_label }} <span class="raw-signal">{{ signal }}</span></h3>
+      {% for field in fields %}
+      <details class="field-group">
+        <summary class="field-summary">
+          <span class="field-name">{{ field.source_field }}</span>
+          {% if field.all_only %}
+          <span class="status-badge status-badge-negative" title="{{ _('Never seen through a partial request.') }}">{{ _("all only") }}</span>
+          {% endif %}
+          <span class="field-value{% if field.latest.kind == "enum" %} raw-value{% endif %}">
+            {{ field.latest.value|format_number(signal) }}{% if field.latest.unit %} {{ field.latest.unit }}{% endif %}
+          </span>
+          <span class="muted">
+            {% if field.latest.captured_at %}{{ field.latest.captured_at | datetime }}{% else %}{{ _("unknown") }}{% endif %}
+          </span>
+          {% if field.latest.captured_at_quality in ("tz_unknown", "invalid") %}
+          <span class="quality-badge quality-{{ field.latest.captured_at_quality }}">
+            {% if field.latest.captured_at_quality == "tz_unknown" %}{{ _("time zone unknown") }}{% else %}{{ _("invalid timestamp") }}{% endif %}
+          </span>
+          {% endif %}
+          {% if field.history %}
+          <span class="muted field-history-count">{{ _("%(count)s earlier", count=field.history_total) }}</span>
+          {% endif %}
+        </summary>
+        {% if field.history %}
+        <table class="history-table">
+          <tr>
+            <th>{{ _("Value") }}</th>
+            <th>{{ _("Captured at") }}</th>
+            <th>{{ _("First seen") }}</th>
+          </tr>
+          {% for v in field.history %}
+          <tr>
+            <td class="{% if v.kind == "enum" %}raw-value{% endif %}">{{ v.value|format_number(signal) }}{% if v.unit %} {{ v.unit }}{% endif %}</td>
+            <td>
+              {% if v.captured_at %}{{ v.captured_at | datetime }}{% else %}{{ _("unknown") }}{% endif %}
+              {% if v.captured_at_quality in ("tz_unknown", "invalid") %}
+              <span class="quality-badge quality-{{ v.captured_at_quality }}">
+                {% if v.captured_at_quality == "tz_unknown" %}{{ _("time zone unknown") }}{% else %}{{ _("invalid timestamp") }}{% endif %}
+              </span>
+              {% endif %}
+            </td>
+            <td>{{ v.first_seen_at | datetime }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+        {% if field.history_truncated %}
+        <p class="muted history-truncated-note">
+          {{ _("Showing the newest %(shown)s of %(total)s earlier values.", shown=field.history|length, total=field.history_total) }}
+        </p>
+        {% endif %}
+        {% endif %}
+      </details>
+      {% endfor %}
+    </div>
     {% endfor %}
-  </select>
-  <input type="hidden" name="signals_page" value="1">
-  <noscript><button type="submit">{{ _("Apply") }}</button></noscript>
-</form>
-{% endif %}
-{% if detail.signals %}
-{% for signal, fields in detail.signals.items() %}
-<h3>{{ signal|signal_label }} <span class="raw-signal">{{ signal }}</span></h3>
-<table>
-  <tr>
-    <th>{{ _("Source field") }}</th>
-    <th>{{ _("Value") }}</th>
-    <th>{{ _("Captured at") }}</th>
-    <th>{{ _("First seen") }}</th>
-  </tr>
-  {% for f in fields %}
-  <tr>
-    <td>{{ f.source_field }}</td>
-    <td class="{% if f.kind == "enum" %}raw-value{% endif %}">{{ f.value|format_number(signal) }}{% if f.unit %} {{ f.unit }}{% endif %}</td>
-    <td>
-      {% if f.captured_at %}{{ f.captured_at | datetime }}{% else %}{{ _("unknown") }}{% endif %}
-      {% if f.captured_at_quality in ("tz_unknown", "invalid") %}
-      <span class="quality-badge quality-{{ f.captured_at_quality }}">
-        {% if f.captured_at_quality == "tz_unknown" %}{{ _("time zone unknown") }}{% else %}{{ _("invalid timestamp") }}{% endif %}
-      </span>
-      {% endif %}
-    </td>
-    <td>{{ f.first_seen_at | datetime }}</td>
-  </tr>
-  {% endfor %}
-</table>
-{% endfor %}
-{% if detail.signals_total_pages > 1 %}
-<p class="muted">
-  {{ _("Page %(page)s of %(total)s", page=detail.signals_page, total=detail.signals_total_pages) }}
-  {% if detail.signals_page > 1 %}<a href="/vehicles/{{ detail.id }}?signals_page={{ detail.signals_page - 1 }}&signals_page_size={{ detail.signals_page_size }}">{{ _("Previous") }}</a>{% endif %}
-  {% if detail.signals_page < detail.signals_total_pages %}<a href="/vehicles/{{ detail.id }}?signals_page={{ detail.signals_page + 1 }}&signals_page_size={{ detail.signals_page_size }}">{{ _("Next") }}</a>{% endif %}
-</p>
-{% endif %}
-{% else %}
-<p>{{ _("No signal values yet.") }}</p>
-{% endif %}
+  </div>
+  {% elif signals_query %}
+  <p>{{ _("No signals match this filter.") }}</p>
+  {% else %}
+  <p>{{ _("No signal values yet.") }}</p>
+  {% endif %}
+  </div>
+</section>
 
 <h2>{{ _("Data requests") }}</h2>
 {% if detail.data_requests %}
@@ -91,26 +133,43 @@
 
 <h2>{{ _("Collector history") }}</h2>
 {% if detail.collector_runs %}
-<table>
-  <tr>
-    <th>{{ _("Started") }}</th>
-    <th>{{ _("Kind") }}</th>
-    <th>{{ _("Outcome") }}</th>
-    <th>{{ _("Listed") }}</th>
-    <th>{{ _("Downloaded") }}</th>
-    <th>{{ _("Pending") }}</th>
-  </tr>
-  {% for run in detail.collector_runs %}
-  <tr>
-    <td>{{ run.started_at | datetime }}</td>
-    <td>{% if run.request_kind %}{{ run.request_kind }}{% else %}&mdash;{% endif %}</td>
-    <td>{{ run.outcome }}</td>
-    <td>{% if run.listed is not none %}{{ run.listed }}{% else %}&mdash;{% endif %}</td>
-    <td>{% if run.downloaded is not none %}{{ run.downloaded }}{% else %}&mdash;{% endif %}</td>
-    <td>{% if run.pending is not none %}{{ run.pending }}{% else %}&mdash;{% endif %}</td>
-  </tr>
+<div class="run-strip">
+  {% for run in detail.collector_runs|reverse %}
+  <span
+    class="run-chip run-chip-{{ run.outcome }}"
+    title="{{ run.started_at | datetime }} · {{ run.outcome }}{% if run.request_kind %} ({{ run.request_kind }}) {% endif %} · {{ _('Listed') }} {{ run.listed if run.listed is not none else "—" }} · {{ _('Downloaded') }} {{ run.downloaded if run.downloaded is not none else "—" }} · {{ _('Pending') }} {{ run.pending if run.pending is not none else "—" }}"
+  ></span>
   {% endfor %}
-</table>
+</div>
+<p class="run-legend">
+  <span><span class="run-chip run-chip-ok"></span>ok</span>
+  <span><span class="run-chip run-chip-error"></span>error</span>
+  <span><span class="run-chip run-chip-login_failed"></span>login_failed</span>
+  <span><span class="run-chip run-chip-rate_limited"></span>rate_limited</span>
+</p>
+<details class="collapsible-table">
+  <summary>{{ _("Show run details") }}</summary>
+  <table>
+    <tr>
+      <th>{{ _("Started") }}</th>
+      <th>{{ _("Kind") }}</th>
+      <th>{{ _("Outcome") }}</th>
+      <th>{{ _("Listed") }}</th>
+      <th>{{ _("Downloaded") }}</th>
+      <th>{{ _("Pending") }}</th>
+    </tr>
+    {% for run in detail.collector_runs %}
+    <tr>
+      <td>{{ run.started_at | datetime }}</td>
+      <td>{% if run.request_kind %}{{ run.request_kind }}{% else %}&mdash;{% endif %}</td>
+      <td>{{ run.outcome }}</td>
+      <td>{% if run.listed is not none %}{{ run.listed }}{% else %}&mdash;{% endif %}</td>
+      <td>{% if run.downloaded is not none %}{{ run.downloaded }}{% else %}&mdash;{% endif %}</td>
+      <td>{% if run.pending is not none %}{{ run.pending }}{% else %}&mdash;{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</details>
 {% else %}
 <p>{{ _("No collector runs yet.") }}</p>
 {% endif %}
